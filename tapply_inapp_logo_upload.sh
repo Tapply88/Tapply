@@ -1,3 +1,517 @@
+cat > pubspec.yaml << 'PUBEOF'
+name: tapply
+description: Tapply - POS Kasir + Membership untuk bisnis F&B
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  http: ^1.2.1
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  provider: ^6.1.2
+  fl_chart: ^0.68.0
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.9
+  hive_generator: ^2.0.1
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+PUBEOF
+
+cat > lib/services/db_service.dart << 'DBEOF'
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
+import '../models/product.dart';
+import '../models/member.dart';
+import '../models/transaction.dart';
+
+class DbService {
+  static const productBox = 'products';
+  static const memberBox = 'members';
+  static const txBox = 'transactions';
+  static const settingsBox = 'settings';
+  static final _uuid = const Uuid();
+
+  static Future<void> init() async {
+    await Hive.initFlutter();
+    Hive.registerAdapter(ProductAdapter());
+    Hive.registerAdapter(MemberAdapter());
+    Hive.registerAdapter(TxItemAdapter());
+    Hive.registerAdapter(TransactionRecordAdapter());
+
+    await Hive.openBox<Product>(productBox);
+    await Hive.openBox<Member>(memberBox);
+    await Hive.openBox<TransactionRecord>(txBox);
+    await Hive.openBox(settingsBox);
+
+    await _seedProductsIfEmpty();
+  }
+
+  static Future<void> _seedProductsIfEmpty() async {
+    final box = Hive.box<Product>(productBox);
+    if (box.isNotEmpty) return;
+    final seed = [
+      Product(id: _uuid.v4(), name: 'Kunyit Asam', price: 12000, category: 'Jamu', stock: 30),
+      Product(id: _uuid.v4(), name: 'Beras Kencur', price: 12000, category: 'Jamu', stock: 30),
+      Product(id: _uuid.v4(), name: 'Temulawak', price: 13000, category: 'Jamu', stock: 30),
+      Product(id: _uuid.v4(), name: 'Sinom', price: 12000, category: 'Jamu', stock: 30),
+      Product(id: _uuid.v4(), name: 'Wedang Uwuh', price: 15000, category: 'Jamu', stock: 30),
+      Product(id: _uuid.v4(), name: 'Jahe Merah', price: 13000, category: 'Jamu', stock: 30),
+    ];
+    for (final p in seed) {
+      await box.put(p.id, p);
+    }
+  }
+
+  // ---- Products ----
+  static Box<Product> get products => Hive.box<Product>(productBox);
+
+  static Future<void> adjustStock(String productId, int delta) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.stock = (p.stock + delta).clamp(0, 1 << 30);
+    await p.save();
+  }
+
+  static Future<void> setStock(String productId, int newStock) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.stock = newStock.clamp(0, 1 << 30);
+    await p.save();
+  }
+
+  static Future<void> addProduct({
+    required String name,
+    required int price,
+    required String category,
+    int stock = 0,
+  }) async {
+    final p = Product(id: _uuid.v4(), name: name, price: price, category: category, stock: stock);
+    await products.put(p.id, p);
+  }
+
+  // ---- Members ----
+  static Box<Member> get members => Hive.box<Member>(memberBox);
+
+  static Member? findMemberByPhone(String phone) {
+    try {
+      return members.values.firstWhere((m) => m.phone == phone);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---- Settings (business profile + tax, service, discount, rounding) ----
+  static Box get settings => Hive.box(settingsBox);
+
+  static String get businessName => settings.get('businessName', defaultValue: 'Tapply');
+  static String get businessAddress => settings.get('businessAddress', defaultValue: '');
+  static String get businessPhone => settings.get('businessPhone', defaultValue: '');
+  static String get receiptFooterText => settings.get('receiptFooterText', defaultValue: 'Terima kasih!');
+  static String? get businessLogoBase64 => settings.get('businessLogoBase64', defaultValue: null);
+
+  static Future<void> setBusinessLogo(String? base64Data) async {
+    if (base64Data == null) {
+      await settings.delete('businessLogoBase64');
+    } else {
+      await settings.put('businessLogoBase64', base64Data);
+    }
+  }
+
+  static bool get taxEnabled => settings.get('taxEnabled', defaultValue: false);
+  static double get taxPercent => settings.get('taxPercent', defaultValue: 11.0);
+  static bool get serviceEnabled => settings.get('serviceEnabled', defaultValue: false);
+  static double get servicePercent => settings.get('servicePercent', defaultValue: 5.0);
+  static bool get discountEnabled => settings.get('discountEnabled', defaultValue: false);
+  static double get discountPercent => settings.get('discountPercent', defaultValue: 0.0);
+  static bool get roundingEnabled => settings.get('roundingEnabled', defaultValue: false);
+  static int get roundingNearest => settings.get('roundingNearest', defaultValue: 100);
+
+  static Future<void> updateBusinessProfile({
+    String? businessName,
+    String? businessAddress,
+    String? businessPhone,
+    String? receiptFooterText,
+  }) async {
+    if (businessName != null) await settings.put('businessName', businessName);
+    if (businessAddress != null) await settings.put('businessAddress', businessAddress);
+    if (businessPhone != null) await settings.put('businessPhone', businessPhone);
+    if (receiptFooterText != null) await settings.put('receiptFooterText', receiptFooterText);
+  }
+
+  static Future<void> updateSettings({
+    bool? taxEnabled,
+    double? taxPercent,
+    bool? serviceEnabled,
+    double? servicePercent,
+    bool? discountEnabled,
+    double? discountPercent,
+    bool? roundingEnabled,
+    int? roundingNearest,
+  }) async {
+    if (taxEnabled != null) await settings.put('taxEnabled', taxEnabled);
+    if (taxPercent != null) await settings.put('taxPercent', taxPercent);
+    if (serviceEnabled != null) await settings.put('serviceEnabled', serviceEnabled);
+    if (servicePercent != null) await settings.put('servicePercent', servicePercent);
+    if (discountEnabled != null) await settings.put('discountEnabled', discountEnabled);
+    if (discountPercent != null) await settings.put('discountPercent', discountPercent);
+    if (roundingEnabled != null) await settings.put('roundingEnabled', roundingEnabled);
+    if (roundingNearest != null) await settings.put('roundingNearest', roundingNearest);
+  }
+
+  /// Hitung rincian total dari subtotal item: {tax, service, discount, rounding, grandTotal}
+  static Map<String, int> computeTotals(int subtotal) {
+    final tax = taxEnabled ? (subtotal * taxPercent / 100).round() : 0;
+    final service = serviceEnabled ? (subtotal * servicePercent / 100).round() : 0;
+    final discount = discountEnabled ? (subtotal * discountPercent / 100).round() : 0;
+    final preRounding = subtotal + tax + service - discount;
+    int rounding = 0;
+    int grandTotal = preRounding;
+    if (roundingEnabled && roundingNearest > 0) {
+      final rounded = (preRounding / roundingNearest).round() * roundingNearest;
+      rounding = rounded - preRounding;
+      grandTotal = rounded;
+    }
+    return {
+      'tax': tax,
+      'service': service,
+      'discount': discount,
+      'rounding': rounding,
+      'grandTotal': grandTotal,
+    };
+  }
+
+  // ---- Transactions ----
+  static Box<TransactionRecord> get transactions => Hive.box<TransactionRecord>(txBox);
+
+  static Future<TransactionRecord> saveTransaction({
+    required List<TxItem> items,
+    required String paymentMethod,
+    String? memberId,
+    String status = 'paid',
+    String? midtransOrderId,
+    String salesType = 'Dine In',
+    int taxAmount = 0,
+    int serviceAmount = 0,
+    int discountAmount = 0,
+    int roundingAdjustment = 0,
+  }) async {
+    final subtotal = items.fold<int>(0, (sum, i) => sum + i.subtotal);
+    final grandTotal = subtotal + taxAmount + serviceAmount - discountAmount + roundingAdjustment;
+    final tx = TransactionRecord(
+      id: _uuid.v4(),
+      items: items,
+      total: grandTotal,
+      createdAt: DateTime.now(),
+      memberId: memberId,
+      paymentMethod: paymentMethod,
+      status: status,
+      midtransOrderId: midtransOrderId,
+      salesType: salesType,
+      taxAmount: taxAmount,
+      serviceAmount: serviceAmount,
+      discountAmount: discountAmount,
+      roundingAdjustment: roundingAdjustment,
+    );
+    await transactions.put(tx.id, tx);
+
+    if (status == 'paid') {
+      for (final item in items) {
+        await adjustStock(item.productId, -item.qty);
+      }
+    }
+
+    if (memberId != null && status == 'paid') {
+      final member = members.get(memberId);
+      if (member != null) {
+        member.points += Member.pointsFromAmount(grandTotal);
+        await member.save();
+      }
+    }
+    return tx;
+  }
+
+  // ---- Reports ----
+  static int totalSalesToday() {
+    final now = DateTime.now();
+    return transactions.values
+        .where((t) =>
+            t.status == 'paid' &&
+            t.createdAt.year == now.year &&
+            t.createdAt.month == now.month &&
+            t.createdAt.day == now.day)
+        .fold(0, (sum, t) => sum + t.total);
+  }
+
+  static Map<String, int> salesByProduct({DateTime? from, DateTime? to}) {
+    final result = <String, int>{};
+    for (final t in transactions.values.where((t) => t.status == 'paid')) {
+      if (from != null && t.createdAt.isBefore(from)) continue;
+      if (to != null && t.createdAt.isAfter(to)) continue;
+      for (final item in t.items) {
+        result[item.productName] = (result[item.productName] ?? 0) + item.qty;
+      }
+    }
+    return result;
+  }
+}
+DBEOF
+
+cat > lib/screens/settings_screen.dart << 'SETEOF'
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../services/db_service.dart';
+
+const _navy = Color(0xFF092762);
+const _grey = Color(0xFFCFCFCF);
+
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _addressCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _footerCtrl;
+  String? _logoBase64;
+
+  late bool _taxEnabled;
+  late final TextEditingController _taxCtrl;
+  late bool _serviceEnabled;
+  late final TextEditingController _serviceCtrl;
+  late bool _discountEnabled;
+  late final TextEditingController _discountCtrl;
+  late bool _roundingEnabled;
+  late int _roundingNearest;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: DbService.businessName);
+    _addressCtrl = TextEditingController(text: DbService.businessAddress);
+    _phoneCtrl = TextEditingController(text: DbService.businessPhone);
+    _footerCtrl = TextEditingController(text: DbService.receiptFooterText);
+    _logoBase64 = DbService.businessLogoBase64;
+
+    _taxEnabled = DbService.taxEnabled;
+    _taxCtrl = TextEditingController(text: DbService.taxPercent.toStringAsFixed(1));
+    _serviceEnabled = DbService.serviceEnabled;
+    _serviceCtrl = TextEditingController(text: DbService.servicePercent.toStringAsFixed(1));
+    _discountEnabled = DbService.discountEnabled;
+    _discountCtrl = TextEditingController(text: DbService.discountPercent.toStringAsFixed(1));
+    _roundingEnabled = DbService.roundingEnabled;
+    _roundingNearest = DbService.roundingNearest;
+  }
+
+  Future<void> _pickLogo() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 600);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    final b64 = base64Encode(bytes);
+    await DbService.setBusinessLogo(b64);
+    setState(() => _logoBase64 = b64);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logo bisnis disimpan')));
+  }
+
+  Future<void> _removeLogo() async {
+    await DbService.setBusinessLogo(null);
+    setState(() => _logoBase64 = null);
+  }
+
+  Future<void> _saveBusinessProfile() async {
+    await DbService.updateBusinessProfile(
+      businessName: _nameCtrl.text.trim(),
+      businessAddress: _addressCtrl.text.trim(),
+      businessPhone: _phoneCtrl.text.trim(),
+      receiptFooterText: _footerCtrl.text.trim().isEmpty ? 'Terima kasih!' : _footerCtrl.text.trim(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil bisnis disimpan')));
+  }
+
+  Future<void> _saveTaxSettings() async {
+    await DbService.updateSettings(
+      taxEnabled: _taxEnabled,
+      taxPercent: double.tryParse(_taxCtrl.text) ?? 0,
+      serviceEnabled: _serviceEnabled,
+      servicePercent: double.tryParse(_serviceCtrl.text) ?? 0,
+      discountEnabled: _discountEnabled,
+      discountPercent: double.tryParse(_discountCtrl.text) ?? 0,
+      roundingEnabled: _roundingEnabled,
+      roundingNearest: _roundingNearest,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan total disimpan')));
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Setelan')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Profil Bisnis', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'Muncul di bagian atas struk (logo, nama, alamat, no. telp).',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  border: Border.all(color: _navy, width: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                  color: _grey.withValues(alpha: 0.3),
+                ),
+                child: _logoBase64 != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(base64Decode(_logoBase64!), fit: BoxFit.contain),
+                      )
+                    : const Icon(Icons.storefront, color: Colors.grey),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                      onPressed: _pickLogo,
+                      child: Text(_logoBase64 != null ? 'Ganti Logo' : 'Upload Logo Bisnis'),
+                    ),
+                    if (_logoBase64 != null)
+                      TextButton(
+                        onPressed: _removeLogo,
+                        child: const Text('Hapus logo', style: TextStyle(color: Colors.red, fontSize: 12)),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nama bisnis')),
+          const SizedBox(height: 8),
+          TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Alamat'), maxLines: 2),
+          const SizedBox(height: 8),
+          TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'No. Telepon'), keyboardType: TextInputType.phone),
+          const SizedBox(height: 8),
+          TextField(controller: _footerCtrl, decoration: const InputDecoration(labelText: 'Teks penutup struk', hintText: 'Terima kasih!')),
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _navy),
+            onPressed: _saveBusinessProfile,
+            child: const Text('Simpan Profil Bisnis'),
+          ),
+          const Divider(height: 40),
+          const Text('Tax, Service, Diskon & Pembulatan', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'Opsional. Nanti bisa juga diatur dari dashboard admin (website) — untuk sekarang atur di sini.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Tax'),
+            value: _taxEnabled,
+            onChanged: (v) => setState(() => _taxEnabled = v),
+          ),
+          if (_taxEnabled)
+            TextField(
+              controller: _taxCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Persentase Tax (%)'),
+            ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Service Charge'),
+            value: _serviceEnabled,
+            onChanged: (v) => setState(() => _serviceEnabled = v),
+          ),
+          if (_serviceEnabled)
+            TextField(
+              controller: _serviceCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Persentase Service (%)'),
+            ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Diskon Otomatis'),
+            value: _discountEnabled,
+            onChanged: (v) => setState(() => _discountEnabled = v),
+          ),
+          if (_discountEnabled)
+            TextField(
+              controller: _discountCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Persentase Diskon (%)'),
+            ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Pembulatan Total'),
+            value: _roundingEnabled,
+            onChanged: (v) => setState(() => _roundingEnabled = v),
+          ),
+          if (_roundingEnabled)
+            DropdownButtonFormField<int>(
+              initialValue: _roundingNearest,
+              decoration: const InputDecoration(labelText: 'Bulatkan ke kelipatan'),
+              items: const [100, 500, 1000]
+                  .map((v) => DropdownMenuItem(value: v, child: Text('Rp $v')))
+                  .toList(),
+              onChanged: (v) => setState(() => _roundingNearest = v ?? 100),
+            ),
+          const SizedBox(height: 16),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _navy),
+            onPressed: _saveTaxSettings,
+            child: const Text('Simpan Pengaturan Total'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+SETEOF
+
+cat > lib/screens/cashier_screen.dart << 'CASHIEREOF'
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -888,3 +1402,7 @@ class _CashierScreenState extends State<CashierScreen> {
     );
   }
 }
+CASHIEREOF
+
+echo 'Selesai. Sekarang jalankan:'
+echo 'flutter clean && flutter pub get && flutter run -d web-server --web-port 8080 --release'

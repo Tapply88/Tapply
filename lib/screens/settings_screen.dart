@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/db_service.dart';
 
 const _navy = Color(0xFF092762);
+const _grey = Color(0xFFCFCFCF);
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,6 +17,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _addressCtrl;
   late final TextEditingController _phoneCtrl;
+  late final TextEditingController _footerCtrl;
+  String? _logoBase64;
 
   late bool _taxEnabled;
   late final TextEditingController _taxCtrl;
@@ -30,6 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _nameCtrl = TextEditingController(text: DbService.businessName);
     _addressCtrl = TextEditingController(text: DbService.businessAddress);
     _phoneCtrl = TextEditingController(text: DbService.businessPhone);
+    _footerCtrl = TextEditingController(text: DbService.receiptFooterText);
+    _logoBase64 = DbService.businessLogoBase64;
 
     _taxEnabled = DbService.taxEnabled;
     _taxCtrl = TextEditingController(text: DbService.taxPercent.toStringAsFixed(1));
@@ -41,11 +48,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _roundingNearest = DbService.roundingNearest;
   }
 
+  Future<void> _pickLogo() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 600, maxHeight: 600);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    final b64 = base64Encode(bytes);
+    await DbService.setBusinessLogo(b64);
+    setState(() => _logoBase64 = b64);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logo bisnis disimpan')));
+  }
+
+  Future<void> _removeLogo() async {
+    await DbService.setBusinessLogo(null);
+    setState(() => _logoBase64 = null);
+  }
+
   Future<void> _saveBusinessProfile() async {
     await DbService.updateBusinessProfile(
       businessName: _nameCtrl.text.trim(),
       businessAddress: _addressCtrl.text.trim(),
       businessPhone: _phoneCtrl.text.trim(),
+      receiptFooterText: _footerCtrl.text.trim().isEmpty ? 'Terima kasih!' : _footerCtrl.text.trim(),
     );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil bisnis disimpan')));
@@ -77,15 +102,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Text('Profil Bisnis', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
           const SizedBox(height: 4),
           const Text(
-            'Muncul di bagian atas struk (nama, alamat, no. telp).',
+            'Muncul di bagian atas struk (logo, nama, alamat, no. telp).',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  border: Border.all(color: _navy, width: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                  color: _grey.withValues(alpha: 0.3),
+                ),
+                child: _logoBase64 != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(base64Decode(_logoBase64!), fit: BoxFit.contain),
+                      )
+                    : const Icon(Icons.storefront, color: Colors.grey),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                      onPressed: _pickLogo,
+                      child: Text(_logoBase64 != null ? 'Ganti Logo' : 'Upload Logo Bisnis'),
+                    ),
+                    if (_logoBase64 != null)
+                      TextButton(
+                        onPressed: _removeLogo,
+                        child: const Text('Hapus logo', style: TextStyle(color: Colors.red, fontSize: 12)),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nama bisnis')),
           const SizedBox(height: 8),
           TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Alamat'), maxLines: 2),
           const SizedBox(height: 8),
           TextField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'No. Telepon'), keyboardType: TextInputType.phone),
+          const SizedBox(height: 8),
+          TextField(controller: _footerCtrl, decoration: const InputDecoration(labelText: 'Teks penutup struk', hintText: 'Terima kasih!')),
           const SizedBox(height: 12),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),

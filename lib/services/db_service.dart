@@ -86,6 +86,16 @@ class DbService {
   static String get businessName => settings.get('businessName', defaultValue: 'Tapply');
   static String get businessAddress => settings.get('businessAddress', defaultValue: '');
   static String get businessPhone => settings.get('businessPhone', defaultValue: '');
+  static String get receiptFooterText => settings.get('receiptFooterText', defaultValue: 'Terima kasih!');
+  static String? get businessLogoBase64 => settings.get('businessLogoBase64', defaultValue: null);
+
+  static Future<void> setBusinessLogo(String? base64Data) async {
+    if (base64Data == null) {
+      await settings.delete('businessLogoBase64');
+    } else {
+      await settings.put('businessLogoBase64', base64Data);
+    }
+  }
 
   static bool get taxEnabled => settings.get('taxEnabled', defaultValue: false);
   static double get taxPercent => settings.get('taxPercent', defaultValue: 11.0);
@@ -100,10 +110,12 @@ class DbService {
     String? businessName,
     String? businessAddress,
     String? businessPhone,
+    String? receiptFooterText,
   }) async {
     if (businessName != null) await settings.put('businessName', businessName);
     if (businessAddress != null) await settings.put('businessAddress', businessAddress);
     if (businessPhone != null) await settings.put('businessPhone', businessPhone);
+    if (receiptFooterText != null) await settings.put('receiptFooterText', receiptFooterText);
   }
 
   static Future<void> updateSettings({
