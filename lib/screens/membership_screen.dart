@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import '../models/member.dart';
 import '../services/db_service.dart';
 
+const _navy = Color(0xFF092762);
+
 class MembershipScreen extends StatefulWidget {
   const MembershipScreen({super.key});
 
@@ -12,10 +14,21 @@ class MembershipScreen extends StatefulWidget {
 
 class _MembershipScreenState extends State<MembershipScreen> {
   final _uuid = const Uuid();
+  final _searchCtrl = TextEditingController();
+  Member? _found;
+  bool _searched = false;
+
+  void _search() {
+    final result = DbService.findMemberByPhone(_searchCtrl.text.trim());
+    setState(() {
+      _found = result;
+      _searched = true;
+    });
+  }
 
   Future<void> _addMember() async {
     final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController(text: _searchCtrl.text.trim());
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -29,7 +42,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Simpan')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _navy),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Simpan'),
+          ),
         ],
       ),
     );
@@ -42,35 +59,77 @@ class _MembershipScreenState extends State<MembershipScreen> {
         joinedAt: DateTime.now(),
       );
       await DbService.members.put(member.id, member);
-      setState(() {});
+      setState(() {
+        _found = member;
+        _searched = true;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final members = DbService.members.values.toList()
-      ..sort((a, b) => b.points.compareTo(a.points));
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Member & Poin'),
-        actions: [IconButton(onPressed: _addMember, icon: const Icon(Icons.person_add))],
-      ),
-      body: members.isEmpty
-          ? const Center(child: Text('Belum ada member. Tap + buat daftarin.'))
-          : ListView.builder(
-              itemCount: members.length,
-              itemBuilder: (ctx, i) {
-                final m = members[i];
-                return ListTile(
-                  leading: CircleAvatar(child: Text(m.name.isNotEmpty ? m.name[0].toUpperCase() : '?')),
-                  title: Text(m.name),
-                  subtitle: Text(m.phone),
-                  trailing: Text('${m.points} poin', style: const TextStyle(fontWeight: FontWeight.bold)),
-                );
-              },
+      appBar: AppBar(title: const Text('Member')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Daftar lengkap member (semua data pelanggan) akan tersedia di dashboard admin. '
+              'Di sini kasir hanya bisa cari 1 nomor untuk cek poin atau daftarkan member baru.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
-      floatingActionButton: FloatingActionButton(onPressed: _addMember, child: const Icon(Icons.add)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: 'Cari no. HP', hintText: '08xxxxxxxxxx'),
+                    onSubmitted: (_) => _search(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _navy),
+                  onPressed: _search,
+                  child: const Text('Cari'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (_searched && _found != null)
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(child: Text(_found!.name.isNotEmpty ? _found!.name[0].toUpperCase() : '?')),
+                  title: Text(_found!.name),
+                  subtitle: Text(_found!.phone),
+                  trailing: Text('${_found!.points} poin', style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                ),
+              )
+            else if (_searched && _found == null)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Member tidak ditemukan.'),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                    onPressed: _addMember,
+                    child: const Text('Daftarkan Member Baru'),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: _navy,
+        onPressed: _addMember,
+        child: const Icon(Icons.person_add),
+      ),
     );
   }
 }

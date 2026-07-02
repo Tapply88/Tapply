@@ -19,11 +19,15 @@ class Product extends HiveObject {
   @HiveField(4)
   bool isActive;
 
+  @HiveField(5)
+  int stock;
+
   Product({
     required this.id,
     required this.name,
     required this.price,
     required this.category,
     this.isActive = true,
+    this.stock = 0,
   });
 }

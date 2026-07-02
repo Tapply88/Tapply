@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'cashier_screen.dart';
 import 'membership_screen.dart';
 import 'report_screen.dart';
+import 'inventory_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _screens = const [
     CashierScreen(),
     MembershipScreen(),
+    InventoryScreen(),
     ReportScreen(),
+    SettingsScreen(),
   ];
 
   @override
@@ -29,7 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'Kasir'),
           NavigationDestination(icon: Icon(Icons.card_membership), label: 'Member'),
+          NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Inventory'),
           NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Laporan'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Setelan'),
         ],
       ),
     );

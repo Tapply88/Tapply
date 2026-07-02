@@ -11,14 +11,44 @@ Future<void> main() async {
 class TapplyApp extends StatelessWidget {
   const TapplyApp({super.key});
 
+  static const backgroundColor = Color(0xFFCFCFCF);
+  static const fontColor = Color(0xFF092762);
+
   @override
   Widget build(BuildContext context) {
+    final textTheme = Typography.material2021().black.apply(
+          bodyColor: fontColor,
+          displayColor: fontColor,
+        );
+
     return MaterialApp(
       title: 'Tapply',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF2E7D32), // hijau jamu
         useMaterial3: true,
+        scaffoldBackgroundColor: backgroundColor,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: fontColor,
+          surface: backgroundColor,
+        ),
+        textTheme: textTheme,
+        appBarTheme: AppBarTheme(
+          backgroundColor: backgroundColor,
+          foregroundColor: fontColor,
+          elevation: 0,
+        ),
+        cardTheme: CardThemeData(
+          color: backgroundColor,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: backgroundColor,
+          labelTextStyle: WidgetStateProperty.all(
+            const TextStyle(color: fontColor, fontSize: 12),
+          ),
+          iconTheme: WidgetStateProperty.all(
+            const IconThemeData(color: fontColor),
+          ),
+        ),
       ),
       home: const HomeScreen(),
     );

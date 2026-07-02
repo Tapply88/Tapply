@@ -16,11 +16,15 @@ class TxItem {
   @HiveField(3)
   int qty;
 
+  @HiveField(4)
+  String? note; // e.g. "Hangat • Extra Madu"
+
   TxItem({
     required this.productId,
     required this.productName,
     required this.price,
     required this.qty,
+    this.note,
   });
 
   int get subtotal => price * qty;
@@ -52,6 +56,21 @@ class TransactionRecord extends HiveObject {
   @HiveField(7)
   String? midtransOrderId;
 
+  @HiveField(8)
+  String salesType; // "Dine In", "Take Away", "Online"
+
+  @HiveField(9)
+  int taxAmount;
+
+  @HiveField(10)
+  int serviceAmount;
+
+  @HiveField(11)
+  int discountAmount;
+
+  @HiveField(12)
+  int roundingAdjustment;
+
   TransactionRecord({
     required this.id,
     required this.items,
@@ -61,5 +80,12 @@ class TransactionRecord extends HiveObject {
     required this.paymentMethod,
     this.status = 'paid',
     this.midtransOrderId,
+    this.salesType = 'Dine In',
+    this.taxAmount = 0,
+    this.serviceAmount = 0,
+    this.discountAmount = 0,
+    this.roundingAdjustment = 0,
   });
+
+  int get itemsSubtotal => items.fold(0, (s, i) => s + i.subtotal);
 }

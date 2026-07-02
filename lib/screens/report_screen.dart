@@ -16,6 +16,8 @@ class ReportScreen extends StatelessWidget {
     final allTx = DbService.transactions.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
+    final lowStock = DbService.products.values.where((p) => p.stock <= 5).toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Laporan Penjualan')),
       body: ListView(
@@ -35,6 +37,23 @@ class ReportScreen extends StatelessWidget {
               ),
             ),
           ),
+          if (lowStock.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('⚠ Stok Menipis (${lowStock.length} produk)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800)),
+                    const SizedBox(height: 8),
+                    ...lowStock.map((p) => Text('${p.name} — sisa ${p.stock}', style: TextStyle(color: Colors.red.shade800))),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           const Text('Produk Terlaris (semua waktu)', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
