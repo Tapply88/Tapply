@@ -25,6 +25,9 @@ class Product extends HiveObject {
   @HiveField(6)
   String? imageBase64;
 
+  @HiveField(7)
+  int sortOrder;
+
   Product({
     required this.id,
     required this.name,
@@ -33,5 +36,6 @@ class Product extends HiveObject {
     this.isActive = true,
     this.stock = 0,
     this.imageBase64,
+    this.sortOrder = 0,
   });
 }

@@ -30,12 +30,12 @@ class DbService {
     final box = Hive.box<Product>(productBox);
     if (box.isNotEmpty) return;
     final seed = [
-      Product(id: _uuid.v4(), name: 'Kunyit Asam', price: 12000, category: 'Jamu', stock: 30),
-      Product(id: _uuid.v4(), name: 'Beras Kencur', price: 12000, category: 'Jamu', stock: 30),
-      Product(id: _uuid.v4(), name: 'Temulawak', price: 13000, category: 'Jamu', stock: 30),
-      Product(id: _uuid.v4(), name: 'Sinom', price: 12000, category: 'Jamu', stock: 30),
-      Product(id: _uuid.v4(), name: 'Wedang Uwuh', price: 15000, category: 'Jamu', stock: 30),
-      Product(id: _uuid.v4(), name: 'Jahe Merah', price: 13000, category: 'Jamu', stock: 30),
+      Product(id: _uuid.v4(), name: 'Kunyit Asam', price: 12000, category: 'Jamu', stock: 30, sortOrder: 0),
+      Product(id: _uuid.v4(), name: 'Beras Kencur', price: 12000, category: 'Jamu', stock: 30, sortOrder: 1),
+      Product(id: _uuid.v4(), name: 'Temulawak', price: 13000, category: 'Jamu', stock: 30, sortOrder: 2),
+      Product(id: _uuid.v4(), name: 'Sinom', price: 12000, category: 'Jamu', stock: 30, sortOrder: 3),
+      Product(id: _uuid.v4(), name: 'Wedang Uwuh', price: 15000, category: 'Jamu', stock: 30, sortOrder: 4),
+      Product(id: _uuid.v4(), name: 'Jahe Merah', price: 13000, category: 'Jamu', stock: 30, sortOrder: 5),
     ];
     for (final p in seed) {
       await box.put(p.id, p);
@@ -66,8 +66,77 @@ class DbService {
     int stock = 0,
     String? imageBase64,
   }) async {
-    final p = Product(id: _uuid.v4(), name: name, price: price, category: category, stock: stock, imageBase64: imageBase64);
+    final maxOrder = products.values.isEmpty ? 0 : products.values.map((p) => p.sortOrder).reduce((a, b) => a > b ? a : b);
+    final p = Product(
+      id: _uuid.v4(),
+      name: name,
+      price: price,
+      category: category,
+      stock: stock,
+      imageBase64: imageBase64,
+      sortOrder: maxOrder + 1,
+    );
     await products.put(p.id, p);
+  }
+
+  static Future<void> setProductCategory(String productId, String category) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.category = category;
+    await p.save();
+  }
+
+  static Future<void> setProductName(String productId, String name) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.name = name;
+    await p.save();
+  }
+
+  // ---- Categories (managed list, chosen when adding/editing products) ----
+  static List<String> get categories {
+    final stored = settings.get('categories', defaultValue: <String>['Jamu']);
+    return List<String>.from(stored);
+  }
+
+  static Future<void> addCategory(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final list = categories;
+    if (!list.contains(trimmed)) {
+      list.add(trimmed);
+      await settings.put('categories', list);
+    }
+  }
+
+  /// Simpan urutan baru untuk SEMUA produk (dipakai saat drag-reorder di halaman "Semua").
+  static Future<void> reorderAll(List<String> orderedProductIds) async {
+    for (var i = 0; i < orderedProductIds.length; i++) {
+      final p = products.get(orderedProductIds[i]);
+      if (p != null) {
+        p.sortOrder = i;
+        await p.save();
+      }
+    }
+  }
+
+  /// Simpan urutan baru untuk produk DALAM satu kategori saja, tanpa mengacak
+  /// posisi produk kategori lain di urutan global.
+  static Future<void> reorderWithinCategory(String category, List<String> newCategoryOrderIds) async {
+    final all = products.values.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final positions = <int>[];
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].category == category) positions.add(i);
+    }
+    final byId = {for (final p in all) p.id: p};
+    for (var i = 0; i < positions.length && i < newCategoryOrderIds.length; i++) {
+      final replacement = byId[newCategoryOrderIds[i]];
+      if (replacement != null) all[positions[i]] = replacement;
+    }
+    for (var i = 0; i < all.length; i++) {
+      all[i].sortOrder = i;
+      await all[i].save();
+    }
   }
 
   static Future<void> setProductImage(String productId, String? base64Data) async {

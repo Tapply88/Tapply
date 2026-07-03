@@ -1,3 +1,608 @@
+cat > pubspec.yaml << 'PUBEOF'
+name: tapply
+description: Tapply - POS Kasir + Membership untuk bisnis F&B
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  http: ^1.2.1
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  provider: ^6.1.2
+  fl_chart: ^0.68.0
+  image_picker: ^1.1.2
+  reorderable_grid_view: ^2.2.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.9
+  hive_generator: ^2.0.1
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+PUBEOF
+
+cat > lib/models/product.dart << 'PRODEOF'
+import 'package:hive/hive.dart';
+
+part 'product.g.dart';
+
+@HiveType(typeId: 0)
+class Product extends HiveObject {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String name;
+
+  @HiveField(2)
+  int price; // in Rupiah
+
+  @HiveField(3)
+  String category; // e.g. "Jamu", "Tambahan"
+
+  @HiveField(4)
+  bool isActive;
+
+  @HiveField(5)
+  int stock;
+
+  @HiveField(6)
+  String? imageBase64;
+
+  @HiveField(7)
+  int sortOrder;
+
+  Product({
+    required this.id,
+    required this.name,
+    required this.price,
+    required this.category,
+    this.isActive = true,
+    this.stock = 0,
+    this.imageBase64,
+    this.sortOrder = 0,
+  });
+}
+PRODEOF
+
+cat > lib/services/db_service.dart << 'DBEOF'
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
+import '../models/product.dart';
+import '../models/member.dart';
+import '../models/transaction.dart';
+
+class DbService {
+  static const productBox = 'products';
+  static const memberBox = 'members';
+  static const txBox = 'transactions';
+  static const settingsBox = 'settings';
+  static final _uuid = const Uuid();
+
+  static Future<void> init() async {
+    await Hive.initFlutter();
+    Hive.registerAdapter(ProductAdapter());
+    Hive.registerAdapter(MemberAdapter());
+    Hive.registerAdapter(TxItemAdapter());
+    Hive.registerAdapter(TransactionRecordAdapter());
+
+    await Hive.openBox<Product>(productBox);
+    await Hive.openBox<Member>(memberBox);
+    await Hive.openBox<TransactionRecord>(txBox);
+    await Hive.openBox(settingsBox);
+
+    await _seedProductsIfEmpty();
+  }
+
+  static Future<void> _seedProductsIfEmpty() async {
+    final box = Hive.box<Product>(productBox);
+    if (box.isNotEmpty) return;
+    final seed = [
+      Product(id: _uuid.v4(), name: 'Kunyit Asam', price: 12000, category: 'Jamu', stock: 30, sortOrder: 0),
+      Product(id: _uuid.v4(), name: 'Beras Kencur', price: 12000, category: 'Jamu', stock: 30, sortOrder: 1),
+      Product(id: _uuid.v4(), name: 'Temulawak', price: 13000, category: 'Jamu', stock: 30, sortOrder: 2),
+      Product(id: _uuid.v4(), name: 'Sinom', price: 12000, category: 'Jamu', stock: 30, sortOrder: 3),
+      Product(id: _uuid.v4(), name: 'Wedang Uwuh', price: 15000, category: 'Jamu', stock: 30, sortOrder: 4),
+      Product(id: _uuid.v4(), name: 'Jahe Merah', price: 13000, category: 'Jamu', stock: 30, sortOrder: 5),
+    ];
+    for (final p in seed) {
+      await box.put(p.id, p);
+    }
+  }
+
+  // ---- Products ----
+  static Box<Product> get products => Hive.box<Product>(productBox);
+
+  static Future<void> adjustStock(String productId, int delta) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.stock = (p.stock + delta).clamp(0, 1 << 30);
+    await p.save();
+  }
+
+  static Future<void> setStock(String productId, int newStock) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.stock = newStock.clamp(0, 1 << 30);
+    await p.save();
+  }
+
+  static Future<void> addProduct({
+    required String name,
+    required int price,
+    required String category,
+    int stock = 0,
+    String? imageBase64,
+  }) async {
+    final maxOrder = products.values.isEmpty ? 0 : products.values.map((p) => p.sortOrder).reduce((a, b) => a > b ? a : b);
+    final p = Product(
+      id: _uuid.v4(),
+      name: name,
+      price: price,
+      category: category,
+      stock: stock,
+      imageBase64: imageBase64,
+      sortOrder: maxOrder + 1,
+    );
+    await products.put(p.id, p);
+  }
+
+  static Future<void> setProductCategory(String productId, String category) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.category = category;
+    await p.save();
+  }
+
+  static Future<void> setProductName(String productId, String name) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.name = name;
+    await p.save();
+  }
+
+  /// Simpan urutan baru hasil drag-reorder untuk produk-produk dalam satu kategori.
+  static Future<void> reorderCategory(List<String> orderedProductIds) async {
+    for (var i = 0; i < orderedProductIds.length; i++) {
+      final p = products.get(orderedProductIds[i]);
+      if (p != null) {
+        p.sortOrder = i;
+        await p.save();
+      }
+    }
+  }
+
+  static Future<void> setProductImage(String productId, String? base64Data) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.imageBase64 = base64Data;
+    await p.save();
+  }
+
+  // ---- Members ----
+  static Box<Member> get members => Hive.box<Member>(memberBox);
+
+  static Member? findMemberByPhone(String phone) {
+    try {
+      return members.values.firstWhere((m) => m.phone == phone);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---- Settings (business profile + tax, service, discount, rounding) ----
+  static Box get settings => Hive.box(settingsBox);
+
+  static String get businessName => settings.get('businessName', defaultValue: 'Tapply');
+  static String get businessAddress => settings.get('businessAddress', defaultValue: '');
+  static String get businessPhone => settings.get('businessPhone', defaultValue: '');
+  static String get receiptFooterText => settings.get('receiptFooterText', defaultValue: 'Terima kasih!');
+  static String? get businessLogoBase64 => settings.get('businessLogoBase64', defaultValue: null);
+
+  static Future<void> setBusinessLogo(String? base64Data) async {
+    if (base64Data == null) {
+      await settings.delete('businessLogoBase64');
+    } else {
+      await settings.put('businessLogoBase64', base64Data);
+    }
+  }
+
+  static bool get taxEnabled => settings.get('taxEnabled', defaultValue: false);
+  static double get taxPercent => settings.get('taxPercent', defaultValue: 11.0);
+  static bool get serviceEnabled => settings.get('serviceEnabled', defaultValue: false);
+  static double get servicePercent => settings.get('servicePercent', defaultValue: 5.0);
+  static bool get discountEnabled => settings.get('discountEnabled', defaultValue: false);
+  static double get discountPercent => settings.get('discountPercent', defaultValue: 0.0);
+  static String get discountPromoName => settings.get('discountPromoName', defaultValue: '');
+  static bool get roundingEnabled => settings.get('roundingEnabled', defaultValue: false);
+  static int get roundingNearest => settings.get('roundingNearest', defaultValue: 100);
+
+  static Future<void> updateBusinessProfile({
+    String? businessName,
+    String? businessAddress,
+    String? businessPhone,
+    String? receiptFooterText,
+  }) async {
+    if (businessName != null) await settings.put('businessName', businessName);
+    if (businessAddress != null) await settings.put('businessAddress', businessAddress);
+    if (businessPhone != null) await settings.put('businessPhone', businessPhone);
+    if (receiptFooterText != null) await settings.put('receiptFooterText', receiptFooterText);
+  }
+
+  static Future<void> updateSettings({
+    bool? taxEnabled,
+    double? taxPercent,
+    bool? serviceEnabled,
+    double? servicePercent,
+    bool? discountEnabled,
+    double? discountPercent,
+    String? discountPromoName,
+    bool? roundingEnabled,
+    int? roundingNearest,
+  }) async {
+    if (taxEnabled != null) await settings.put('taxEnabled', taxEnabled);
+    if (taxPercent != null) await settings.put('taxPercent', taxPercent);
+    if (serviceEnabled != null) await settings.put('serviceEnabled', serviceEnabled);
+    if (servicePercent != null) await settings.put('servicePercent', servicePercent);
+    if (discountEnabled != null) await settings.put('discountEnabled', discountEnabled);
+    if (discountPercent != null) await settings.put('discountPercent', discountPercent);
+    if (discountPromoName != null) await settings.put('discountPromoName', discountPromoName);
+    if (roundingEnabled != null) await settings.put('roundingEnabled', roundingEnabled);
+    if (roundingNearest != null) await settings.put('roundingNearest', roundingNearest);
+  }
+
+  /// Hitung rincian total dari subtotal item: {tax, service, discount, rounding, grandTotal}
+  static Map<String, int> computeTotals(int subtotal) {
+    final tax = taxEnabled ? (subtotal * taxPercent / 100).round() : 0;
+    final service = serviceEnabled ? (subtotal * servicePercent / 100).round() : 0;
+    final discount = discountEnabled ? (subtotal * discountPercent / 100).round() : 0;
+    final preRounding = subtotal + tax + service - discount;
+    int rounding = 0;
+    int grandTotal = preRounding;
+    if (roundingEnabled && roundingNearest > 0) {
+      final rounded = (preRounding / roundingNearest).round() * roundingNearest;
+      rounding = rounded - preRounding;
+      grandTotal = rounded;
+    }
+    return {
+      'tax': tax,
+      'service': service,
+      'discount': discount,
+      'rounding': rounding,
+      'grandTotal': grandTotal,
+    };
+  }
+
+  // ---- Transactions ----
+  static Box<TransactionRecord> get transactions => Hive.box<TransactionRecord>(txBox);
+
+  static Future<TransactionRecord> saveTransaction({
+    required List<TxItem> items,
+    required String paymentMethod,
+    String? memberId,
+    String status = 'paid',
+    String? midtransOrderId,
+    String salesType = 'Dine In',
+    int taxAmount = 0,
+    int serviceAmount = 0,
+    int discountAmount = 0,
+    int roundingAdjustment = 0,
+    String? guestName,
+  }) async {
+    final subtotal = items.fold<int>(0, (sum, i) => sum + i.subtotal);
+    final grandTotal = subtotal + taxAmount + serviceAmount - discountAmount + roundingAdjustment;
+    final tx = TransactionRecord(
+      id: _uuid.v4(),
+      items: items,
+      total: grandTotal,
+      createdAt: DateTime.now(),
+      memberId: memberId,
+      paymentMethod: paymentMethod,
+      status: status,
+      midtransOrderId: midtransOrderId,
+      salesType: salesType,
+      taxAmount: taxAmount,
+      serviceAmount: serviceAmount,
+      discountAmount: discountAmount,
+      roundingAdjustment: roundingAdjustment,
+      guestName: guestName,
+    );
+    await transactions.put(tx.id, tx);
+
+    if (status == 'paid') {
+      for (final item in items) {
+        await adjustStock(item.productId, -item.qty);
+      }
+    }
+
+    if (memberId != null && status == 'paid') {
+      final member = members.get(memberId);
+      if (member != null) {
+        member.points += Member.pointsFromAmount(grandTotal);
+        await member.save();
+      }
+    }
+    return tx;
+  }
+
+  // ---- Reports ----
+  static int totalSalesToday() {
+    final now = DateTime.now();
+    return transactions.values
+        .where((t) =>
+            t.status == 'paid' &&
+            t.createdAt.year == now.year &&
+            t.createdAt.month == now.month &&
+            t.createdAt.day == now.day)
+        .fold(0, (sum, t) => sum + t.total);
+  }
+
+  static Map<String, int> salesByProduct({DateTime? from, DateTime? to}) {
+    final result = <String, int>{};
+    for (final t in transactions.values.where((t) => t.status == 'paid')) {
+      if (from != null && t.createdAt.isBefore(from)) continue;
+      if (to != null && t.createdAt.isAfter(to)) continue;
+      for (final item in t.items) {
+        result[item.productName] = (result[item.productName] ?? 0) + item.qty;
+      }
+    }
+    return result;
+  }
+}
+DBEOF
+
+cat > lib/screens/inventory_screen.dart << 'INVEOF'
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import '../models/product.dart';
+import '../services/db_service.dart';
+
+const _navy = Color(0xFF092762);
+
+class InventoryScreen extends StatefulWidget {
+  const InventoryScreen({super.key});
+
+  @override
+  State<InventoryScreen> createState() => _InventoryScreenState();
+}
+
+class _InventoryScreenState extends State<InventoryScreen> {
+  final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+  Future<void> _editProduct(Product p) async {
+    final nameCtrl = TextEditingController(text: p.name);
+    final categoryCtrl = TextEditingController(text: p.category);
+    final stockCtrl = TextEditingController(text: '${p.stock}');
+    String? imageBase64 = p.imageBase64;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Edit Produk', style: TextStyle(color: _navy)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final picker = ImagePicker();
+                      final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 500, maxHeight: 500);
+                      if (file == null) return;
+                      final bytes = await file.readAsBytes();
+                      setDialogState(() => imageBase64 = base64Encode(bytes));
+                    },
+                    child: Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: _navy, width: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFCFCFCF),
+                      ),
+                      child: imageBase64 != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(base64Decode(imageBase64!), fit: BoxFit.cover),
+                            )
+                          : const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama produk')),
+                  const SizedBox(height: 8),
+                  TextField(controller: categoryCtrl, decoration: const InputDecoration(labelText: 'Kategori', hintText: 'mis. Jamu, Minuman, Tambahan')),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: stockCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Stok saat ini'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: _navy),
+                onPressed: () async {
+                  await DbService.setProductName(p.id, nameCtrl.text.trim().isEmpty ? p.name : nameCtrl.text.trim());
+                  await DbService.setProductCategory(p.id, categoryCtrl.text.trim().isEmpty ? p.category : categoryCtrl.text.trim());
+                  await DbService.setStock(p.id, int.tryParse(stockCtrl.text) ?? p.stock);
+                  await DbService.setProductImage(p.id, imageBase64);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) setState(() {});
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _addProduct() async {
+    final nameCtrl = TextEditingController();
+    final categoryCtrl = TextEditingController(text: 'Jamu');
+    final priceCtrl = TextEditingController();
+    final stockCtrl = TextEditingController(text: '0');
+    String? imageBase64;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Tambah Produk', style: TextStyle(color: _navy)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final picker = ImagePicker();
+                      final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 500, maxHeight: 500);
+                      if (file == null) return;
+                      final bytes = await file.readAsBytes();
+                      setDialogState(() => imageBase64 = base64Encode(bytes));
+                    },
+                    child: Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: _navy, width: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                        color: const Color(0xFFCFCFCF),
+                      ),
+                      child: imageBase64 != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(base64Decode(imageBase64!), fit: BoxFit.cover),
+                            )
+                          : const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama produk')),
+                  const SizedBox(height: 8),
+                  TextField(controller: categoryCtrl, decoration: const InputDecoration(labelText: 'Kategori', hintText: 'mis. Jamu, Minuman, Tambahan')),
+                  const SizedBox(height: 8),
+                  TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
+                  const SizedBox(height: 8),
+                  TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok awal')),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: _navy),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (ok == true && nameCtrl.text.isNotEmpty) {
+      await DbService.addProduct(
+        name: nameCtrl.text.trim(),
+        price: int.tryParse(priceCtrl.text) ?? 0,
+        category: categoryCtrl.text.trim().isEmpty ? 'Jamu' : categoryCtrl.text.trim(),
+        stock: int.tryParse(stockCtrl.text) ?? 0,
+        imageBase64: imageBase64,
+      );
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = DbService.products.values.toList()
+      ..sort((a, b) => a.stock.compareTo(b.stock));
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Inventory'),
+        actions: [IconButton(onPressed: _addProduct, icon: const Icon(Icons.add))],
+      ),
+      body: ListView.builder(
+        itemCount: items.length,
+        itemBuilder: (ctx, i) {
+          final p = items[i];
+          final low = p.stock <= 5;
+          return ListTile(
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: const Color(0xFFCFCFCF),
+              ),
+              child: p.imageBase64 != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.memory(base64Decode(p.imageBase64!), fit: BoxFit.cover),
+                    )
+                  : const Icon(Icons.local_cafe_outlined, color: _navy, size: 20),
+            ),
+            title: Text(p.name),
+            subtitle: Text('${p.category} • ${_currency.format(p.price)}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: low ? Colors.red.shade50 : Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: low ? Colors.red : Colors.green),
+                  ),
+                  child: Text(
+                    'Stok: ${p.stock}',
+                    style: TextStyle(
+                      color: low ? Colors.red.shade800 : Colors.green.shade800,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _editProduct(p)),
+              ],
+            ),
+            onTap: () => _editProduct(p),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: _navy,
+        onPressed: _addProduct,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+INVEOF
+
+cat > lib/screens/cashier_screen.dart << 'CASHIEREOF'
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -858,9 +1463,11 @@ class _CashierScreenState extends State<CashierScreen> {
   Widget build(BuildContext context) {
     final allProducts = DbService.products.values.where((p) => p.isActive).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    final categoryNames = DbService.categories.where((c) => allProducts.any((p) => p.category == c)).toList();
-    final pages = <String?>[null, ...categoryNames]; // null = "Semua"
-    if (_categoryIndex >= pages.length) _categoryIndex = 0;
+    final categories = <String>[];
+    for (final p in allProducts) {
+      if (!categories.contains(p.category)) categories.add(p.category);
+    }
+    if (_categoryIndex >= categories.length) _categoryIndex = 0;
     final totals = _totals;
 
     return Scaffold(
@@ -877,13 +1484,13 @@ class _CashierScreenState extends State<CashierScreen> {
             flex: 3,
             child: Column(
               children: [
-                if (pages.length > 1)
+                if (categories.length > 1)
                   SizedBox(
                     height: 44,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      itemCount: pages.length,
+                      itemCount: categories.length,
                       separatorBuilder: (_, __) => const SizedBox(width: 8),
                       itemBuilder: (ctx, i) {
                         final selected = i == _categoryIndex;
@@ -901,7 +1508,7 @@ class _CashierScreenState extends State<CashierScreen> {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              pages[i] ?? 'Semua',
+                              categories[i],
                               style: TextStyle(color: selected ? Colors.white : _navy, fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ),
@@ -912,12 +1519,12 @@ class _CashierScreenState extends State<CashierScreen> {
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
-                    itemCount: pages.length,
+                    itemCount: categories.isEmpty ? 1 : categories.length,
                     onPageChanged: (i) => setState(() => _categoryIndex = i),
                     itemBuilder: (ctx, pageIndex) {
-                      final category = pages[pageIndex]; // null = semua
-                      final pageProducts = category == null
-                          ? allProducts
+                      final category = categories.isEmpty ? null : categories[pageIndex];
+                      final categoryProducts = category == null
+                          ? <Product>[]
                           : allProducts.where((p) => p.category == category).toList();
                       return Padding(
                         padding: const EdgeInsets.all(12),
@@ -926,19 +1533,15 @@ class _CashierScreenState extends State<CashierScreen> {
                           childAspectRatio: 0.85,
                           mainAxisSpacing: 10,
                           crossAxisSpacing: 10,
-                          onReorder: (oldIndex, newIndex) async {
-                            final reordered = List<Product>.from(pageProducts);
-                            final moved = reordered.removeAt(oldIndex);
-                            reordered.insert(newIndex, moved);
-                            if (category == null) {
-                              await DbService.reorderAll(reordered.map((p) => p.id).toList());
-                            } else {
-                              await DbService.reorderWithinCategory(category, reordered.map((p) => p.id).toList());
-                            }
-                            if (mounted) setState(() {});
+                          onReorder: (oldIndex, newIndex) {
+                            setState(() {
+                              final moved = categoryProducts.removeAt(oldIndex);
+                              categoryProducts.insert(newIndex, moved);
+                            });
+                            DbService.reorderCategory(categoryProducts.map((p) => p.id).toList());
                           },
                           children: [
-                            for (final p in pageProducts)
+                            for (final p in categoryProducts)
                               _buildProductCard(p, key: ValueKey(p.id)),
                           ],
                         ),
@@ -1095,3 +1698,7 @@ class _CashierScreenState extends State<CashierScreen> {
     );
   }
 }
+CASHIEREOF
+
+echo 'Selesai. Sekarang jalankan:'
+echo 'flutter clean && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter run -d web-server --web-port 8080 --release'

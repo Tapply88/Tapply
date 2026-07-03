@@ -18,6 +18,7 @@ dependencies:
   provider: ^6.1.2
   fl_chart: ^0.68.0
   image_picker: ^1.1.2
+  reorderable_grid_view: ^2.2.8
 
 dev_dependencies:
   flutter_test:
