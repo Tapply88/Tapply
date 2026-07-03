@@ -64,9 +64,17 @@ class DbService {
     required int price,
     required String category,
     int stock = 0,
+    String? imageBase64,
   }) async {
-    final p = Product(id: _uuid.v4(), name: name, price: price, category: category, stock: stock);
+    final p = Product(id: _uuid.v4(), name: name, price: price, category: category, stock: stock, imageBase64: imageBase64);
     await products.put(p.id, p);
+  }
+
+  static Future<void> setProductImage(String productId, String? base64Data) async {
+    final p = products.get(productId);
+    if (p == null) return;
+    p.imageBase64 = base64Data;
+    await p.save();
   }
 
   // ---- Members ----
@@ -103,6 +111,7 @@ class DbService {
   static double get servicePercent => settings.get('servicePercent', defaultValue: 5.0);
   static bool get discountEnabled => settings.get('discountEnabled', defaultValue: false);
   static double get discountPercent => settings.get('discountPercent', defaultValue: 0.0);
+  static String get discountPromoName => settings.get('discountPromoName', defaultValue: '');
   static bool get roundingEnabled => settings.get('roundingEnabled', defaultValue: false);
   static int get roundingNearest => settings.get('roundingNearest', defaultValue: 100);
 
@@ -125,6 +134,7 @@ class DbService {
     double? servicePercent,
     bool? discountEnabled,
     double? discountPercent,
+    String? discountPromoName,
     bool? roundingEnabled,
     int? roundingNearest,
   }) async {
@@ -134,6 +144,7 @@ class DbService {
     if (servicePercent != null) await settings.put('servicePercent', servicePercent);
     if (discountEnabled != null) await settings.put('discountEnabled', discountEnabled);
     if (discountPercent != null) await settings.put('discountPercent', discountPercent);
+    if (discountPromoName != null) await settings.put('discountPromoName', discountPromoName);
     if (roundingEnabled != null) await settings.put('roundingEnabled', roundingEnabled);
     if (roundingNearest != null) await settings.put('roundingNearest', roundingNearest);
   }
@@ -174,6 +185,7 @@ class DbService {
     int serviceAmount = 0,
     int discountAmount = 0,
     int roundingAdjustment = 0,
+    String? guestName,
   }) async {
     final subtotal = items.fold<int>(0, (sum, i) => sum + i.subtotal);
     final grandTotal = subtotal + taxAmount + serviceAmount - discountAmount + roundingAdjustment;
@@ -191,6 +203,7 @@ class DbService {
       serviceAmount: serviceAmount,
       discountAmount: discountAmount,
       roundingAdjustment: roundingAdjustment,
+      guestName: guestName,
     );
     await transactions.put(tx.id, tx);
 

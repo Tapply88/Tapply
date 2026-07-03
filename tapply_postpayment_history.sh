@@ -1,3 +1,147 @@
+mkdir -p lib/widgets
+
+cat > lib/widgets/receipt_view.dart << 'RECEIPTEOF'
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../models/transaction.dart';
+import '../services/db_service.dart';
+
+const navyColor = Color(0xFF092762);
+
+String paymentMethodLabel(String code) {
+  switch (code) {
+    case 'cash':
+      return 'Cash';
+    case 'qris_manual':
+      return 'QRIS (Manual)';
+    case 'qris_midtrans':
+      return 'QRIS / E-Wallet (Midtrans)';
+    case 'edc_BCA':
+      return 'EDC BCA';
+    case 'edc_Mandiri':
+      return 'EDC Mandiri';
+    case 'edc_BNI':
+      return 'EDC BNI';
+    default:
+      return code;
+  }
+}
+
+/// Widget struk yang dipakai ulang di: halaman setelah bayar & history transaksi.
+class ReceiptView extends StatelessWidget {
+  final TransactionRecord tx;
+  const ReceiptView({super.key, required this.tx});
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    String? customerName;
+    if (tx.memberId != null) {
+      final m = DbService.members.get(tx.memberId);
+      if (m != null) customerName = '${m.name} (member)';
+    } else if (tx.guestName != null && tx.guestName!.isNotEmpty) {
+      customerName = tx.guestName;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: Column(
+            children: [
+              if (DbService.businessLogoBase64 != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    height: 56,
+                    child: Image.memory(base64Decode(DbService.businessLogoBase64!), fit: BoxFit.contain),
+                  ),
+                ),
+              Text(DbService.businessName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: navyColor)),
+              if (DbService.businessAddress.isNotEmpty)
+                Text(DbService.businessAddress, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              if (DbService.businessPhone.isNotEmpty)
+                Text(DbService.businessPhone, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+        const Divider(height: 24),
+        Text(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(tx.salesType, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (customerName != null)
+          Text('Pelanggan: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text('Bayar: ${paymentMethodLabel(tx.paymentMethod)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 8),
+        ...tx.items.map((item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${item.productName} x${item.qty}', style: const TextStyle(fontSize: 13)),
+                        if (item.note != null && item.note!.isNotEmpty)
+                          Text(item.note!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                  Text(currency.format(item.subtotal), style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            )),
+        const Divider(height: 20),
+        _row(currency, 'Sub-Total', tx.itemsSubtotal),
+        _row(currency, 'Tax', tx.taxAmount),
+        _row(currency, 'Service', tx.serviceAmount),
+        if (tx.discountAmount > 0)
+          _row(
+            currency,
+            DbService.discountPromoName.isNotEmpty ? 'Discount (${DbService.discountPromoName})' : 'Discount',
+            -tx.discountAmount,
+          ),
+        _row(currency, 'Rounding', tx.roundingAdjustment),
+        const Divider(height: 20),
+        _row(currency, 'Total', tx.total, bold: true),
+        const SizedBox(height: 20),
+        Center(child: Text(DbService.receiptFooterText, style: const TextStyle(fontSize: 12, color: Colors.grey))),
+        const SizedBox(height: 16),
+        Center(
+          child: Column(
+            children: [
+              const Text('powered by', style: TextStyle(fontSize: 9, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Image.asset('assets/logo.png', height: 20),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(NumberFormat currency, String label, int amount, {bool bold = false}) {
+    final style = TextStyle(
+      fontSize: bold ? 15 : 13,
+      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+      color: navyColor,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text(currency.format(amount), style: style),
+        ],
+      ),
+    );
+  }
+}
+RECEIPTEOF
+
+cat > lib/screens/cashier_screen.dart << 'CASHIEREOF'
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -1012,3 +1156,121 @@ class _CashierScreenState extends State<CashierScreen> {
     );
   }
 }
+CASHIEREOF
+
+cat > lib/screens/report_screen.dart << 'REPEOF'
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../services/db_service.dart';
+import '../widgets/receipt_view.dart';
+
+const _navy = Color(0xFF092762);
+
+class ReportScreen extends StatelessWidget {
+  const ReportScreen({super.key});
+
+  void _showReceipt(BuildContext context, tx) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ReceiptView(tx: tx),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final todayTotal = DbService.totalSalesToday();
+    final byProduct = DbService.salesByProduct();
+    final sortedEntries = byProduct.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final allTx = DbService.transactions.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    final lowStock = DbService.products.values.where((p) => p.stock <= 5).toList();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Laporan Penjualan')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Penjualan Hari Ini'),
+                  const SizedBox(height: 4),
+                  Text(currency.format(todayTotal), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+          if (lowStock.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Card(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('⚠ Stok Menipis (${lowStock.length} produk)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800)),
+                    const SizedBox(height: 8),
+                    ...lowStock.map((p) => Text('${p.name} — sisa ${p.stock}', style: TextStyle(color: Colors.red.shade800))),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          const Text('Produk Terlaris (semua waktu)', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ...sortedEntries.map((e) => ListTile(
+                dense: true,
+                title: Text(e.key),
+                trailing: Text('${e.value} terjual'),
+              )),
+          const SizedBox(height: 20),
+          const Text('Riwayat Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Tap untuk lihat struk lengkap', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          const SizedBox(height: 8),
+          ...allTx.take(100).map((t) => ListTile(
+                dense: true,
+                onTap: () => _showReceipt(context, t),
+                title: Text(currency.format(t.total)),
+                subtitle: Text('${paymentMethodLabel(t.paymentMethod)} • ${DateFormat('dd MMM yyyy, HH:mm').format(t.createdAt)}'),
+                trailing: Text(t.status),
+              )),
+        ],
+      ),
+    );
+  }
+}
+REPEOF
+
+echo 'Selesai. Sekarang jalankan:'
+echo 'flutter clean && flutter pub get && flutter run -d web-server --web-port 8080 --release'

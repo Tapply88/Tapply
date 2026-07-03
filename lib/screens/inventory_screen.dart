@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../models/product.dart';
 import '../services/db_service.dart';
@@ -15,57 +17,125 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
-  Future<void> _editStock(Product p) async {
-    final controller = TextEditingController(text: '${p.stock}');
-    final result = await showDialog<int>(
+  Future<void> _editProduct(Product p) async {
+    final stockCtrl = TextEditingController(text: '${p.stock}');
+    String? imageBase64 = p.imageBase64;
+
+    await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(p.name, style: const TextStyle(color: _navy)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Stok saat ini'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _navy),
-            onPressed: () => Navigator.pop(ctx, int.tryParse(controller.text) ?? p.stock),
-            child: const Text('Simpan'),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: Text(p.name, style: const TextStyle(color: _navy)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 500, maxHeight: 500);
+                    if (file == null) return;
+                    final bytes = await file.readAsBytes();
+                    setDialogState(() => imageBase64 = base64Encode(bytes));
+                  },
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: _navy, width: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFCFCFCF),
+                    ),
+                    child: imageBase64 != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(base64Decode(imageBase64!), fit: BoxFit.cover),
+                          )
+                        : const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: stockCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Stok saat ini'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: _navy),
+                onPressed: () async {
+                  await DbService.setStock(p.id, int.tryParse(stockCtrl.text) ?? p.stock);
+                  await DbService.setProductImage(p.id, imageBase64);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) setState(() {});
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    if (result != null) {
-      await DbService.setStock(p.id, result);
-      setState(() {});
-    }
   }
 
   Future<void> _addProduct() async {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
     final stockCtrl = TextEditingController(text: '0');
+    String? imageBase64;
+
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tambah Produk', style: TextStyle(color: _navy)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama produk')),
-            TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
-            TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok awal')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _navy),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Simpan'),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Tambah Produk', style: TextStyle(color: _navy)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 500, maxHeight: 500);
+                    if (file == null) return;
+                    final bytes = await file.readAsBytes();
+                    setDialogState(() => imageBase64 = base64Encode(bytes));
+                  },
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: _navy, width: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFFCFCFCF),
+                    ),
+                    child: imageBase64 != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(base64Decode(imageBase64!), fit: BoxFit.cover),
+                          )
+                        : const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama produk')),
+                TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
+                TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok awal')),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: _navy),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (ok == true && nameCtrl.text.isNotEmpty) {
@@ -74,6 +144,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         price: int.tryParse(priceCtrl.text) ?? 0,
         category: 'Jamu',
         stock: int.tryParse(stockCtrl.text) ?? 0,
+        imageBase64: imageBase64,
       );
       setState(() {});
     }
@@ -95,6 +166,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
           final p = items[i];
           final low = p.stock <= 5;
           return ListTile(
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: const Color(0xFFCFCFCF),
+              ),
+              child: p.imageBase64 != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.memory(base64Decode(p.imageBase64!), fit: BoxFit.cover),
+                    )
+                  : const Icon(Icons.local_cafe_outlined, color: _navy, size: 20),
+            ),
             title: Text(p.name),
             subtitle: Text(_currency.format(p.price)),
             trailing: Row(
@@ -116,9 +201,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _editStock(p)),
+                IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _editProduct(p)),
               ],
             ),
+            onTap: () => _editProduct(p),
           );
         },
       ),

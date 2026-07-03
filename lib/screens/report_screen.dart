@@ -1,9 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/db_service.dart';
+import '../widgets/receipt_view.dart';
+
+const _navy = Color(0xFF092762);
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
+
+  void _showReceipt(BuildContext context, tx) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ReceiptView(tx: tx),
+                  const SizedBox(height: 16),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Tutup'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,11 +95,13 @@ class ReportScreen extends StatelessWidget {
               )),
           const SizedBox(height: 20),
           const Text('Riwayat Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Tap untuk lihat struk lengkap', style: TextStyle(fontSize: 11, color: Colors.grey)),
           const SizedBox(height: 8),
-          ...allTx.take(50).map((t) => ListTile(
+          ...allTx.take(100).map((t) => ListTile(
                 dense: true,
+                onTap: () => _showReceipt(context, t),
                 title: Text(currency.format(t.total)),
-                subtitle: Text('${t.paymentMethod} • ${DateFormat('dd MMM yyyy, HH:mm').format(t.createdAt)}'),
+                subtitle: Text('${paymentMethodLabel(t.paymentMethod)} • ${DateFormat('dd MMM yyyy, HH:mm').format(t.createdAt)}'),
                 trailing: Text(t.status),
               )),
         ],

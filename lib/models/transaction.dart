@@ -71,6 +71,9 @@ class TransactionRecord extends HiveObject {
   @HiveField(12)
   int roundingAdjustment;
 
+  @HiveField(13)
+  String? guestName;
+
   TransactionRecord({
     required this.id,
     required this.items,
@@ -85,6 +88,7 @@ class TransactionRecord extends HiveObject {
     this.serviceAmount = 0,
     this.discountAmount = 0,
     this.roundingAdjustment = 0,
+    this.guestName,
   });
 
   int get itemsSubtotal => items.fold(0, (s, i) => s + i.subtotal);

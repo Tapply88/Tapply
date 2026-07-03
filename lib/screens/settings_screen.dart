@@ -26,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _serviceCtrl;
   late bool _discountEnabled;
   late final TextEditingController _discountCtrl;
+  late final TextEditingController _promoNameCtrl;
   late bool _roundingEnabled;
   late int _roundingNearest;
 
@@ -44,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _serviceCtrl = TextEditingController(text: DbService.servicePercent.toStringAsFixed(1));
     _discountEnabled = DbService.discountEnabled;
     _discountCtrl = TextEditingController(text: DbService.discountPercent.toStringAsFixed(1));
+    _promoNameCtrl = TextEditingController(text: DbService.discountPromoName);
     _roundingEnabled = DbService.roundingEnabled;
     _roundingNearest = DbService.roundingNearest;
   }
@@ -84,6 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       servicePercent: double.tryParse(_serviceCtrl.text) ?? 0,
       discountEnabled: _discountEnabled,
       discountPercent: double.tryParse(_discountCtrl.text) ?? 0,
+      discountPromoName: _promoNameCtrl.text.trim(),
       roundingEnabled: _roundingEnabled,
       roundingNearest: _roundingNearest,
     );
@@ -196,28 +199,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             activeThumbColor: _navy,
-            title: const Text('Diskon Otomatis'),
+            title: const Text('Automatic Discount'),
             value: _discountEnabled,
             onChanged: (v) => setState(() => _discountEnabled = v),
           ),
-          if (_discountEnabled)
+          if (_discountEnabled) ...[
             TextField(
               controller: _discountCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Persentase Diskon (%)'),
+              decoration: const InputDecoration(labelText: 'Discount percentage (%)'),
             ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _promoNameCtrl,
+              decoration: const InputDecoration(labelText: 'Promo name (optional)', hintText: 'e.g. Ramadan Promo'),
+            ),
+          ],
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             activeThumbColor: _navy,
-            title: const Text('Pembulatan Total'),
+            title: const Text('Total Rounding'),
             value: _roundingEnabled,
             onChanged: (v) => setState(() => _roundingEnabled = v),
           ),
           if (_roundingEnabled)
             DropdownButtonFormField<int>(
               initialValue: _roundingNearest,
-              decoration: const InputDecoration(labelText: 'Bulatkan ke kelipatan'),
+              decoration: const InputDecoration(labelText: 'Round to nearest'),
               items: const [100, 500, 1000]
                   .map((v) => DropdownMenuItem(value: v, child: Text('Rp $v')))
                   .toList(),

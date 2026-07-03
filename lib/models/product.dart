@@ -22,6 +22,9 @@ class Product extends HiveObject {
   @HiveField(5)
   int stock;
 
+  @HiveField(6)
+  String? imageBase64;
+
   Product({
     required this.id,
     required this.name,
@@ -29,5 +32,6 @@ class Product extends HiveObject {
     required this.category,
     this.isActive = true,
     this.stock = 0,
+    this.imageBase64,
   });
 }
