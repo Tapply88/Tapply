@@ -108,15 +108,15 @@ class ReceiptView extends StatelessWidget {
             )),
         const Divider(height: 20),
         _row(currency, 'Sub-Total', tx.itemsSubtotal),
-        _row(currency, 'Tax', tx.taxAmount),
-        _row(currency, 'Service', tx.serviceAmount),
+        if (DbService.showZeroAmountRows || tx.taxAmount != 0) _row(currency, 'Tax', tx.taxAmount),
+        if (DbService.showZeroAmountRows || tx.serviceAmount != 0) _row(currency, 'Service', tx.serviceAmount),
         if (tx.discountAmount > 0)
           _row(
             currency,
             (tx.discountLabel != null && tx.discountLabel!.isNotEmpty) ? 'Discount (${tx.discountLabel})' : 'Discount',
             -tx.discountAmount,
           ),
-        _row(currency, 'Rounding', tx.roundingAdjustment),
+        if (DbService.showZeroAmountRows || tx.roundingAdjustment != 0) _row(currency, 'Rounding', tx.roundingAdjustment),
         const Divider(height: 20),
         _row(currency, 'Total', tx.total, bold: true),
         const SizedBox(height: 20),

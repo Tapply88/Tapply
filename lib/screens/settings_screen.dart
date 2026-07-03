@@ -31,6 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _roundingEnabled;
   late int _roundingNearest;
   late bool _queueNumberEnabled;
+  late bool _showZeroAmountRows;
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _roundingEnabled = DbService.roundingEnabled;
     _roundingNearest = DbService.roundingNearest;
     _queueNumberEnabled = DbService.queueNumberEnabled;
+    _showZeroAmountRows = DbService.showZeroAmountRows;
   }
 
   Future<void> _pickLogo() async {
@@ -260,6 +262,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (v) async {
               setState(() => _queueNumberEnabled = v);
               await DbService.setQueueNumberEnabled(v);
+            },
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Selalu Tampilkan Tax/Service/Rounding'),
+            subtitle: const Text('Kalau dimatikan, baris itu disembunyikan waktu nilainya Rp0', style: TextStyle(fontSize: 11)),
+            value: _showZeroAmountRows,
+            onChanged: (v) async {
+              setState(() => _showZeroAmountRows = v);
+              await DbService.setShowZeroAmountRows(v);
             },
           ),
           const SizedBox(height: 16),

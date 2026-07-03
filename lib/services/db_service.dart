@@ -187,6 +187,8 @@ class DbService {
   static String get discountPromoName => settings.get('discountPromoName', defaultValue: '');
   static bool get roundingEnabled => settings.get('roundingEnabled', defaultValue: false);
   static int get roundingNearest => settings.get('roundingNearest', defaultValue: 100);
+  static bool get showZeroAmountRows => settings.get('showZeroAmountRows', defaultValue: false);
+  static Future<void> setShowZeroAmountRows(bool v) async => settings.put('showZeroAmountRows', v);
 
   static Future<void> updateBusinessProfile({
     String? businessName,
@@ -254,10 +256,14 @@ class DbService {
     await promos.delete(promoId);
   }
 
-  static int promoDiscountAmount(Promo p, {required int cartSubtotal, Map<String, int>? productSubtotals}) {
+  static int promoDiscountAmount(Promo p, {required int cartSubtotal, Map<String, int>? productSubtotals, Map<String, int>? productQuantities}) {
     if (p.scope == 'product') {
+      if (p.discountType == 'fixed') {
+        final eligibleQty = p.productIds.fold<int>(0, (s, id) => s + (productQuantities?[id] ?? 0));
+        return (p.value * eligibleQty).round();
+      }
       final eligible = p.productIds.fold<int>(0, (s, id) => s + (productSubtotals?[id] ?? 0));
-      return p.discountType == 'percentage' ? (eligible * p.value / 100).round() : p.value.round();
+      return (eligible * p.value / 100).round();
     }
     return p.discountType == 'percentage' ? (cartSubtotal * p.value / 100).round() : p.value.round();
   }

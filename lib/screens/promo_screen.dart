@@ -114,29 +114,36 @@ class _PromoScreenState extends State<PromoScreen> {
                   const Text('Kosongkan tanggal kalau mau berlaku terus-menerus.', style: TextStyle(fontSize: 11, color: Colors.grey)),
                   const SizedBox(height: 12),
                   const Text('BERLAKU UNTUK', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile<String>(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Seluruh Struk', style: TextStyle(fontSize: 13)),
-                          value: 'cart',
-                          groupValue: scope,
-                          onChanged: (v) => setDialogState(() => scope = v!),
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile<String>(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Produk Tertentu', style: TextStyle(fontSize: 13)),
-                          value: 'product',
-                          groupValue: scope,
-                          onChanged: (v) => setDialogState(() => scope = v!),
-                        ),
-                      ),
-                    ],
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Seluruh Struk', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Diskon dihitung dari total belanja', style: TextStyle(fontSize: 11)),
+                    value: 'cart',
+                    groupValue: scope,
+                    onChanged: (v) => setDialogState(() => scope = v!),
                   ),
-                  if (scope == 'product') ...[
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Produk Tertentu (preset)', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Otomatis kepakai kalau produk yang dicentang ada di keranjang', style: TextStyle(fontSize: 11)),
+                    value: 'product',
+                    groupValue: scope,
+                    onChanged: (v) => setDialogState(() => scope = v!),
+                  ),
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Per Item (opsional saat transaksi)', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Kasir centang manual per produk pas nambahin ke keranjang, mis. diskon bawa tumbler sendiri', style: TextStyle(fontSize: 11)),
+                    value: 'item',
+                    groupValue: scope,
+                    onChanged: (v) => setDialogState(() => scope = v!),
+                  ),
+                  if (scope == 'product' || scope == 'item') ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      scope == 'item' ? 'Batasi ke produk tertentu (opsional, kosongkan = berlaku semua produk):' : 'Pilih produk:',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       constraints: const BoxConstraints(maxHeight: 180),
@@ -161,7 +168,7 @@ class _PromoScreenState extends State<PromoScreen> {
                         }).toList(),
                       ),
                     ),
-                    if (selectedProductIds.isEmpty)
+                    if (scope == 'product' && selectedProductIds.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: Text('Pilih minimal 1 produk.', style: TextStyle(fontSize: 11, color: Colors.red)),
@@ -253,7 +260,7 @@ class _PromoScreenState extends State<PromoScreen> {
                   title: Text(p.name, style: TextStyle(color: p.active ? _navy : Colors.grey, fontWeight: FontWeight.bold)),
                   subtitle: Text(
                     'Diskon $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}'
-                    '${p.scope == 'product' ? ' • ${p.productIds.length} produk tertentu' : ' • seluruh struk'}\n$dateLabel',
+                    '${p.scope == 'product' ? ' • ${p.productIds.length} produk (preset)' : p.scope == 'item' ? ' • per item${p.productIds.isNotEmpty ? ' (${p.productIds.length} produk)' : ' (semua produk)'}' : ' • seluruh struk'}\n$dateLabel',
                     style: const TextStyle(fontSize: 12),
                   ),
                   isThreeLine: true,
