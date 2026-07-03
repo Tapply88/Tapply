@@ -216,6 +216,10 @@ class DbService {
   static Future<void> setShowZeroAmountRows(bool v) async => settings.put('showZeroAmountRows', v);
   static bool get printCheckEnabled => settings.get('printCheckEnabled', defaultValue: true);
   static Future<void> setPrintCheckEnabled(bool v) async => settings.put('printCheckEnabled', v);
+  static String get managerPin => settings.get('managerPin', defaultValue: '1234');
+  static Future<void> setManagerPin(String pin) async => settings.put('managerPin', pin);
+  static String get language => settings.get('language', defaultValue: 'id');
+  static Future<void> setLanguage(String lang) async => settings.put('language', lang);
 
   static Future<void> updateBusinessProfile({
     String? businessName,

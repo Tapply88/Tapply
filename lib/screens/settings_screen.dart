@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/db_service.dart';
 import 'promo_screen.dart';
 import 'variants_screen.dart';
+import '../services/app_strings.dart';
 
 const _navy = Color(0xFF092762);
 const _grey = Color(0xFFCFCFCF);
@@ -20,6 +21,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _addressCtrl;
   late final TextEditingController _phoneCtrl;
   late final TextEditingController _footerCtrl;
+  late final TextEditingController _pinCtrl;
+  late String _language;
   String? _logoBase64;
 
   late bool _taxEnabled;
@@ -44,6 +47,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _addressCtrl = TextEditingController(text: DbService.businessAddress);
     _phoneCtrl = TextEditingController(text: DbService.businessPhone);
     _footerCtrl = TextEditingController(text: DbService.receiptFooterText);
+    _pinCtrl = TextEditingController(text: DbService.managerPin);
+    _language = DbService.language;
     _logoBase64 = DbService.businessLogoBase64;
 
     _taxEnabled = DbService.taxEnabled;
@@ -362,6 +367,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: _saveTaxSettings,
             child: const Text('Simpan Pengaturan Total'),
+          ),
+          const Divider(height: 40),
+          Text(AppStrings.t('keamanan'), style: const TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'PIN ini diminta setiap kali kasir mau cancel/hapus item dari keranjang.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _pinCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: AppStrings.t('pin_manager')),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _navy),
+            onPressed: () async {
+              await DbService.setManagerPin(_pinCtrl.text.trim().isEmpty ? '1234' : _pinCtrl.text.trim());
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PIN disimpan')));
+            },
+            child: const Text('Simpan PIN'),
+          ),
+          const Divider(height: 40),
+          Text(AppStrings.t('bahasa'), style: const TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'Bahasa tampilan aplikasi. Nama menu/produk dan nama promo TIDAK ikut diterjemahkan '
+            '(tetap sesuai yang kamu ketik). Fitur ini masih tahap awal — belum semua layar diterjemahkan.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: _language == 'id' ? _navy : Colors.transparent,
+                    foregroundColor: _language == 'id' ? Colors.white : _navy,
+                    side: const BorderSide(color: _navy),
+                  ),
+                  onPressed: () async {
+                    setState(() => _language = 'id');
+                    await DbService.setLanguage('id');
+                  },
+                  child: const Text('Bahasa Indonesia'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: _language == 'en' ? _navy : Colors.transparent,
+                    foregroundColor: _language == 'en' ? Colors.white : _navy,
+                    side: const BorderSide(color: _navy),
+                  ),
+                  onPressed: () async {
+                    setState(() => _language = 'en');
+                    await DbService.setLanguage('en');
+                  },
+                  child: const Text('English'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
