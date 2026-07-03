@@ -30,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _promoNameCtrl;
   late bool _roundingEnabled;
   late int _roundingNearest;
+  late bool _queueNumberEnabled;
 
   @override
   void initState() {
@@ -49,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _promoNameCtrl = TextEditingController(text: DbService.discountPromoName);
     _roundingEnabled = DbService.roundingEnabled;
     _roundingNearest = DbService.roundingNearest;
+    _queueNumberEnabled = DbService.queueNumberEnabled;
   }
 
   Future<void> _pickLogo() async {
@@ -248,6 +250,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   .toList(),
               onChanged: (v) => setState(() => _roundingNearest = v ?? 100),
             ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Nomor Antrian di Struk'),
+            subtitle: const Text('Opsional — nomor urut harian yang dicetak besar di struk', style: TextStyle(fontSize: 11)),
+            value: _queueNumberEnabled,
+            onChanged: (v) async {
+              setState(() => _queueNumberEnabled = v);
+              await DbService.setQueueNumberEnabled(v);
+            },
+          ),
           const SizedBox(height: 16),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),

@@ -23,6 +23,8 @@ class _PromoScreenState extends State<PromoScreen> {
     final valueCtrl = TextEditingController(text: existing != null ? existing.value.toStringAsFixed(existing.discountType == 'percentage' ? 1 : 0) : '');
     final minPurchaseCtrl = TextEditingController(text: '${existing?.minPurchase ?? 0}');
     String discountType = existing?.discountType ?? 'percentage';
+    String scope = existing?.scope ?? 'cart';
+    final selectedProductIds = <String>{...(existing?.productIds ?? [])};
     DateTime? startDate = existing?.startDate;
     DateTime? endDate = existing?.endDate;
     bool active = existing?.active ?? true;
@@ -110,7 +112,62 @@ class _PromoScreenState extends State<PromoScreen> {
                     ],
                   ),
                   const Text('Kosongkan tanggal kalau mau berlaku terus-menerus.', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  const Text('BERLAKU UNTUK', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Seluruh Struk', style: TextStyle(fontSize: 13)),
+                          value: 'cart',
+                          groupValue: scope,
+                          onChanged: (v) => setDialogState(() => scope = v!),
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Produk Tertentu', style: TextStyle(fontSize: 13)),
+                          value: 'product',
+                          groupValue: scope,
+                          onChanged: (v) => setDialogState(() => scope = v!),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (scope == 'product') ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 180),
+                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: DbService.products.values.map((p) {
+                          final checked = selectedProductIds.contains(p.id);
+                          return CheckboxListTile(
+                            dense: true,
+                            value: checked,
+                            activeColor: _navy,
+                            title: Text(p.name, style: const TextStyle(fontSize: 13)),
+                            onChanged: (v) => setDialogState(() {
+                              if (v == true) {
+                                selectedProductIds.add(p.id);
+                              } else {
+                                selectedProductIds.remove(p.id);
+                              }
+                            }),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    if (selectedProductIds.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text('Pilih minimal 1 produk.', style: TextStyle(fontSize: 11, color: Colors.red)),
+                      ),
+                  ],
+                  const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     activeThumbColor: _navy,
@@ -127,6 +184,7 @@ class _PromoScreenState extends State<PromoScreen> {
                 style: FilledButton.styleFrom(backgroundColor: _navy),
                 onPressed: () async {
                   if (nameCtrl.text.trim().isEmpty) return;
+                  if (scope == 'product' && selectedProductIds.isEmpty) return;
                   final promo = Promo(
                     id: existing?.id ?? _uuid.v4(),
                     name: nameCtrl.text.trim(),
@@ -136,6 +194,8 @@ class _PromoScreenState extends State<PromoScreen> {
                     endDate: endDate,
                     minPurchase: int.tryParse(minPurchaseCtrl.text) ?? 0,
                     active: active,
+                    scope: scope,
+                    productIds: selectedProductIds.toList(),
                   );
                   await DbService.savePromo(promo);
                   if (ctx.mounted) Navigator.pop(ctx);
@@ -192,7 +252,8 @@ class _PromoScreenState extends State<PromoScreen> {
                   leading: Icon(Icons.local_offer, color: p.active ? _navy : Colors.grey),
                   title: Text(p.name, style: TextStyle(color: p.active ? _navy : Colors.grey, fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                    'Diskon $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}\n$dateLabel',
+                    'Diskon $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}'
+                    '${p.scope == 'product' ? ' • ${p.productIds.length} produk tertentu' : ' • seluruh struk'}\n$dateLabel',
                     style: const TextStyle(fontSize: 12),
                   ),
                   isThreeLine: true,

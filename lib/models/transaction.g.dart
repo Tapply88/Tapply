@@ -78,13 +78,17 @@ class TransactionRecordAdapter extends TypeAdapter<TransactionRecord> {
       roundingAdjustment: fields[12] as int,
       guestName: fields[13] as String?,
       discountLabel: fields[14] as String?,
+      receiptNumber: fields[15] as String?,
+      cashierName: fields[16] as String?,
+      cashierEmail: fields[17] as String?,
+      queueNumber: fields[18] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransactionRecord obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -114,7 +118,15 @@ class TransactionRecordAdapter extends TypeAdapter<TransactionRecord> {
       ..writeByte(13)
       ..write(obj.guestName)
       ..writeByte(14)
-      ..write(obj.discountLabel);
+      ..write(obj.discountLabel)
+      ..writeByte(15)
+      ..write(obj.receiptNumber)
+      ..writeByte(16)
+      ..write(obj.cashierName)
+      ..writeByte(17)
+      ..write(obj.cashierEmail)
+      ..writeByte(18)
+      ..write(obj.queueNumber);
   }
 
   @override

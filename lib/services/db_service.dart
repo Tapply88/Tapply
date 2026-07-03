@@ -254,20 +254,64 @@ class DbService {
     await promos.delete(promoId);
   }
 
-  static int promoDiscountAmount(Promo p, int subtotal) =>
-      p.discountType == 'percentage' ? (subtotal * p.value / 100).round() : p.value.round();
+  static int promoDiscountAmount(Promo p, {required int cartSubtotal, Map<String, int>? productSubtotals}) {
+    if (p.scope == 'product') {
+      final eligible = p.productIds.fold<int>(0, (s, id) => s + (productSubtotals?[id] ?? 0));
+      return p.discountType == 'percentage' ? (eligible * p.value / 100).round() : p.value.round();
+    }
+    return p.discountType == 'percentage' ? (cartSubtotal * p.value / 100).round() : p.value.round();
+  }
 
   /// Semua promo yang aktif, dalam rentang tanggal, dan memenuhi minimum pembelian
-  /// untuk subtotal ini — dipakai buat nampilin pilihan ke kasir.
-  static List<Promo> validPromosFor(int subtotal) {
+  /// (dicek terhadap subtotal seluruh struk, atau subtotal produk terkait kalau scope
+  /// promonya per-produk) — dipakai buat nampilin pilihan ke kasir.
+  static List<Promo> validPromosFor({required int cartSubtotal, Map<String, int>? productSubtotals}) {
     final now = DateTime.now();
     return promos.values.where((p) {
       if (!p.active) return false;
       if (p.startDate != null && now.isBefore(p.startDate!)) return false;
       if (p.endDate != null && now.isAfter(p.endDate!)) return false;
-      if (subtotal < p.minPurchase) return false;
+      if (p.scope == 'product') {
+        final eligible = p.productIds.fold<int>(0, (s, id) => s + (productSubtotals?[id] ?? 0));
+        if (eligible <= 0) return false;
+        if (eligible < p.minPurchase) return false;
+      } else {
+        if (cartSubtotal < p.minPurchase) return false;
+      }
       return true;
     }).toList();
+  }
+
+  // ---- Cashier session (versi sederhana, per-device) ----
+  static String get currentCashierName => settings.get('currentCashierName', defaultValue: '');
+  static String get currentCashierEmail => settings.get('currentCashierEmail', defaultValue: '');
+
+  static Future<void> setCurrentCashier({required String name, required String email}) async {
+    await settings.put('currentCashierName', name);
+    await settings.put('currentCashierEmail', email);
+  }
+
+  // ---- Receipt & queue numbering ----
+  static bool get queueNumberEnabled => settings.get('queueNumberEnabled', defaultValue: false);
+  static Future<void> setQueueNumberEnabled(bool enabled) async => settings.put('queueNumberEnabled', enabled);
+
+  static String _nextReceiptNumber() {
+    final next = (settings.get('receiptCounter', defaultValue: 0) as int) + 1;
+    settings.put('receiptCounter', next);
+    return 'TPL-${next.toString().padLeft(6, '0')}';
+  }
+
+  static int _nextQueueNumber() {
+    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+    final storedDate = settings.get('queueDate', defaultValue: '');
+    int counter = settings.get('queueCounter', defaultValue: 0);
+    if (storedDate != todayKey) {
+      counter = 0;
+      settings.put('queueDate', todayKey);
+    }
+    counter += 1;
+    settings.put('queueCounter', counter);
+    return counter;
   }
 
   // ---- Transactions ----
@@ -305,6 +349,10 @@ class DbService {
       roundingAdjustment: roundingAdjustment,
       guestName: guestName,
       discountLabel: discountLabel,
+      receiptNumber: _nextReceiptNumber(),
+      cashierName: currentCashierName.isEmpty ? null : currentCashierName,
+      cashierEmail: currentCashierEmail.isEmpty ? null : currentCashierEmail,
+      queueNumber: queueNumberEnabled ? _nextQueueNumber() : null,
     );
     await transactions.put(tx.id, tx);
 

@@ -28,6 +28,12 @@ class Promo extends HiveObject {
   @HiveField(7)
   bool active;
 
+  @HiveField(8)
+  String scope; // 'cart' (seluruh struk) or 'product' (produk tertentu)
+
+  @HiveField(9)
+  List<String> productIds; // dipakai kalau scope == 'product'
+
   Promo({
     required this.id,
     required this.name,
@@ -37,5 +43,7 @@ class Promo extends HiveObject {
     this.endDate,
     this.minPurchase = 0,
     this.active = true,
-  });
+    this.scope = 'cart',
+    List<String>? productIds,
+  }) : productIds = productIds ?? [];
 }

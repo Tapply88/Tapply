@@ -25,13 +25,15 @@ class PromoAdapter extends TypeAdapter<Promo> {
       endDate: fields[5] as DateTime?,
       minPurchase: fields[6] as int,
       active: fields[7] as bool,
+      scope: fields[8] as String,
+      productIds: (fields[9] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Promo obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +49,11 @@ class PromoAdapter extends TypeAdapter<Promo> {
       ..writeByte(6)
       ..write(obj.minPurchase)
       ..writeByte(7)
-      ..write(obj.active);
+      ..write(obj.active)
+      ..writeByte(8)
+      ..write(obj.scope)
+      ..writeByte(9)
+      ..write(obj.productIds);
   }
 
   @override

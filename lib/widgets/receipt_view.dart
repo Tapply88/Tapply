@@ -64,11 +64,28 @@ class ReceiptView extends StatelessWidget {
           ),
         ),
         const Divider(height: 24),
+        if (tx.receiptNumber != null)
+          Text('No. Struk: ${tx.receiptNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text('Order ID: ${tx.id.substring(0, tx.id.length >= 8 ? 8 : tx.id.length).toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
         Text(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt), style: const TextStyle(fontSize: 11, color: Colors.grey)),
         Text(tx.salesType, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         if (customerName != null)
           Text('Pelanggan: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Text('Bayar: ${paymentMethodLabel(tx.paymentMethod)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (tx.cashierName != null && tx.cashierName!.isNotEmpty)
+          Text('Dilayani oleh: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (tx.queueNumber != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Center(
+              child: Column(
+                children: [
+                  const Text('NOMOR ANTRIAN', style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1)),
+                  Text('${tx.queueNumber}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: navyColor)),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 8),
         ...tx.items.map((item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
