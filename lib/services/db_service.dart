@@ -303,23 +303,34 @@ class DbService {
   static bool get queueNumberEnabled => settings.get('queueNumberEnabled', defaultValue: false);
   static Future<void> setQueueNumberEnabled(bool enabled) async => settings.put('queueNumberEnabled', enabled);
 
+  /// Nomor mulai buat antrian tiap hari (dipakai pas tanggal berganti / hari baru).
+  static int get queueStartNumber => settings.get('queueStartNumber', defaultValue: 1);
+  static Future<void> setQueueStartNumber(int n) async => settings.put('queueStartNumber', n);
+
+  /// Paksa nomor antrian HARI INI mulai/lanjut dari angka tertentu sekarang juga.
+  static Future<void> resetQueueCounterToday(int nextNumber) async {
+    final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+    await settings.put('queueDate', todayKey);
+    await settings.put('queueCounter', nextNumber - 1);
+  }
+
   static String _nextReceiptNumber() {
     final next = (settings.get('receiptCounter', defaultValue: 0) as int) + 1;
     settings.put('receiptCounter', next);
     return 'TPL-${next.toString().padLeft(6, '0')}';
   }
 
-  static int _nextQueueNumber() {
+  static String _nextQueueCode() {
     final todayKey = DateTime.now().toIso8601String().substring(0, 10);
     final storedDate = settings.get('queueDate', defaultValue: '');
     int counter = settings.get('queueCounter', defaultValue: 0);
     if (storedDate != todayKey) {
-      counter = 0;
+      counter = queueStartNumber - 1;
       settings.put('queueDate', todayKey);
     }
     counter += 1;
     settings.put('queueCounter', counter);
-    return counter;
+    return '$counter';
   }
 
   // ---- Transactions ----
@@ -338,9 +349,16 @@ class DbService {
     int roundingAdjustment = 0,
     String? guestName,
     String? discountLabel,
+    String? manualQueueCode,
   }) async {
     final subtotal = items.fold<int>(0, (sum, i) => sum + i.subtotal);
     final grandTotal = subtotal + taxAmount + serviceAmount - discountAmount + roundingAdjustment;
+    String? queueCode;
+    if (manualQueueCode != null && manualQueueCode.trim().isNotEmpty) {
+      queueCode = manualQueueCode.trim();
+    } else if (queueNumberEnabled) {
+      queueCode = _nextQueueCode();
+    }
     final tx = TransactionRecord(
       id: _uuid.v4(),
       items: items,
@@ -360,7 +378,7 @@ class DbService {
       receiptNumber: _nextReceiptNumber(),
       cashierName: currentCashierName.isEmpty ? null : currentCashierName,
       cashierEmail: currentCashierEmail.isEmpty ? null : currentCashierEmail,
-      queueNumber: queueNumberEnabled ? _nextQueueNumber() : null,
+      queueCode: queueCode,
     );
     await transactions.put(tx.id, tx);
 

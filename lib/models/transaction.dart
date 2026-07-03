@@ -87,7 +87,7 @@ class TransactionRecord extends HiveObject {
   String? cashierEmail;
 
   @HiveField(18)
-  int? queueNumber;
+  String? queueCode;
 
   TransactionRecord({
     required this.id,
@@ -108,7 +108,7 @@ class TransactionRecord extends HiveObject {
     this.receiptNumber,
     this.cashierName,
     this.cashierEmail,
-    this.queueNumber,
+    this.queueCode,
   });
 
   int get itemsSubtotal => items.fold(0, (s, i) => s + i.subtotal);

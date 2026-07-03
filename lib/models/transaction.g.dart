@@ -81,7 +81,7 @@ class TransactionRecordAdapter extends TypeAdapter<TransactionRecord> {
       receiptNumber: fields[15] as String?,
       cashierName: fields[16] as String?,
       cashierEmail: fields[17] as String?,
-      queueNumber: fields[18] as int?,
+      queueCode: fields[18] as String?,
     );
   }
 
@@ -126,7 +126,7 @@ class TransactionRecordAdapter extends TypeAdapter<TransactionRecord> {
       ..writeByte(17)
       ..write(obj.cashierEmail)
       ..writeByte(18)
-      ..write(obj.queueNumber);
+      ..write(obj.queueCode);
   }
 
   @override

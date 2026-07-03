@@ -31,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _roundingEnabled;
   late int _roundingNearest;
   late bool _queueNumberEnabled;
+  late final TextEditingController _queueStartCtrl;
+  final _queueTodayCtrl = TextEditingController();
   late bool _showZeroAmountRows;
   late bool _printCheckEnabled;
 
@@ -53,6 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _roundingEnabled = DbService.roundingEnabled;
     _roundingNearest = DbService.roundingNearest;
     _queueNumberEnabled = DbService.queueNumberEnabled;
+    _queueStartCtrl = TextEditingController(text: '${DbService.queueStartNumber}');
     _showZeroAmountRows = DbService.showZeroAmountRows;
     _printCheckEnabled = DbService.printCheckEnabled;
   }
@@ -259,13 +262,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
             contentPadding: EdgeInsets.zero,
             activeThumbColor: _navy,
             title: const Text('Nomor Antrian di Struk'),
-            subtitle: const Text('Opsional — nomor urut harian yang dicetak besar di struk', style: TextStyle(fontSize: 11)),
+            subtitle: const Text('Opsional — nomor urut harian di bagian paling atas struk', style: TextStyle(fontSize: 11)),
             value: _queueNumberEnabled,
             onChanged: (v) async {
               setState(() => _queueNumberEnabled = v);
               await DbService.setQueueNumberEnabled(v);
             },
           ),
+          if (_queueNumberEnabled) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _queueStartCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Mulai dari (tiap hari baru)', isDense: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _navy),
+                  onPressed: () async {
+                    final n = int.tryParse(_queueStartCtrl.text) ?? 1;
+                    await DbService.setQueueStartNumber(n);
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nomor mulai harian disimpan')));
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _queueTodayCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Set nomor antrian HARI INI sekarang ke', isDense: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                  onPressed: () async {
+                    final n = int.tryParse(_queueTodayCtrl.text);
+                    if (n == null) return;
+                    await DbService.resetQueueCounterToday(n);
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Nomor antrian berikutnya: $n')));
+                  },
+                  child: const Text('Terapkan'),
+                ),
+              ],
+            ),
+            const Text(
+              'Bisa juga isi manual per transaksi (kode custom) langsung di kasir — gak harus angka urut.',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             activeThumbColor: _navy,
