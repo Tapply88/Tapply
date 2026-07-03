@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/product.dart';
@@ -220,6 +222,61 @@ class DbService {
   static Future<void> setManagerPin(String pin) async => settings.put('managerPin', pin);
   static String get language => settings.get('language', defaultValue: 'id');
   static Future<void> setLanguage(String lang) async => settings.put('language', lang);
+
+  // ---- Sinkronisasi ke dashboard web (satu arah: app -> cloud) ----
+  static bool get syncEnabled => settings.get('syncEnabled', defaultValue: false);
+  static Future<void> setSyncEnabled(bool v) async => settings.put('syncEnabled', v);
+  static String get syncServerUrl => settings.get('syncServerUrl', defaultValue: '');
+  static Future<void> setSyncServerUrl(String url) async => settings.put('syncServerUrl', url);
+  static String get syncApiKey => settings.get('syncApiKey', defaultValue: '');
+  static Future<void> setSyncApiKey(String key) async => settings.put('syncApiKey', key);
+
+  /// Kirim satu transaksi ke dashboard web. Gak nge-block, gak nge-throw —
+  /// kalau lagi offline atau server-nya mati, transaksi tetap aman di Hive
+  /// lokal, cuma gak ke-push ke cloud (belum ada retry queue di versi ini).
+  static Future<void> _pushTransactionToCloud(TransactionRecord tx) async {
+    if (!syncEnabled || syncServerUrl.isEmpty || syncApiKey.isEmpty) return;
+    try {
+      await http
+          .post(
+            Uri.parse('$syncServerUrl/sync/transaction'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': syncApiKey,
+            },
+            body: jsonEncode({
+              'items': tx.items
+                  .map((i) => {
+                        'productId': i.productId,
+                        'productName': i.productName,
+                        'price': i.price,
+                        'qty': i.qty,
+                        'note': i.note,
+                      })
+                  .toList(),
+              'total': tx.total,
+              'taxAmount': tx.taxAmount,
+              'serviceAmount': tx.serviceAmount,
+              'discountAmount': tx.discountAmount,
+              'discountLabel': tx.discountLabel,
+              'roundingAdjustment': tx.roundingAdjustment,
+              'paymentMethod': tx.paymentMethod,
+              'salesType': tx.salesType,
+              'guestName': tx.guestName,
+              'cashierName': tx.cashierName,
+              'cashierEmail': tx.cashierEmail,
+              'receiptNumber': tx.receiptNumber,
+              'queueCode': tx.queueCode,
+              'status': tx.status,
+              'createdAt': tx.createdAt.toIso8601String(),
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Sengaja diem — offline itu hal normal buat POS, jangan sampai
+      // gagal sync bikin transaksi kasir ikut gagal.
+    }
+  }
 
   static Future<void> updateBusinessProfile({
     String? businessName,
@@ -496,6 +553,10 @@ class DbService {
       queueCode: queueCode,
     );
     await transactions.put(tx.id, tx);
+
+    // Sinkronisasi ke dashboard web — best-effort, gak nunggu (biar checkout
+    // tetep instan) dan gak bikin transaksi gagal kalau lagi offline/gagal kirim.
+    _pushTransactionToCloud(tx);
 
     if (status == 'paid') {
       for (final item in items) {

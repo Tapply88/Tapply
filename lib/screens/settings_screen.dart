@@ -39,6 +39,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _queueTodayCtrl = TextEditingController();
   late bool _showZeroAmountRows;
   late bool _printCheckEnabled;
+  late bool _syncEnabled;
+  late final TextEditingController _syncUrlCtrl;
+  late final TextEditingController _syncKeyCtrl;
 
   @override
   void initState() {
@@ -64,6 +67,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _queueStartCtrl = TextEditingController(text: '${DbService.queueStartNumber}');
     _showZeroAmountRows = DbService.showZeroAmountRows;
     _printCheckEnabled = DbService.printCheckEnabled;
+    _syncEnabled = DbService.syncEnabled;
+    _syncUrlCtrl = TextEditingController(text: DbService.syncServerUrl);
+    _syncKeyCtrl = TextEditingController(text: DbService.syncApiKey);
   }
 
   Future<void> _pickLogo() async {
@@ -431,6 +437,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ],
+          ),
+          const Divider(height: 40),
+          const Text('Sinkronisasi ke Dashboard Web', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'Kirim transaksi ke dashboard web (satu arah). Ambil URL server dan kode API dari '
+            'dashboard web → Setelan → Sinkronisasi. Kalau lagi offline, transaksi tetap aman '
+            'tersimpan lokal, cuma belum ke-kirim (belum ada retry otomatis di versi ini).',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Aktifkan Sinkronisasi'),
+            value: _syncEnabled,
+            onChanged: (v) => setState(() => _syncEnabled = v),
+          ),
+          if (_syncEnabled) ...[
+            TextField(
+              controller: _syncUrlCtrl,
+              decoration: const InputDecoration(labelText: 'URL Server Sync', hintText: 'https://tapply-server.example.com'),
+              keyboardType: TextInputType.url,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _syncKeyCtrl,
+              decoration: const InputDecoration(labelText: 'Kode API (dari dashboard web)'),
+            ),
+          ],
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _navy),
+            onPressed: () async {
+              await DbService.setSyncEnabled(_syncEnabled);
+              await DbService.setSyncServerUrl(_syncUrlCtrl.text.trim());
+              await DbService.setSyncApiKey(_syncKeyCtrl.text.trim());
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan sinkronisasi disimpan')));
+            },
+            child: const Text('Simpan Sinkronisasi'),
           ),
         ],
       ),
