@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/db_service.dart';
 import 'promo_screen.dart';
+import 'variants_screen.dart';
 
 const _navy = Color(0xFF092762);
 const _grey = Color(0xFFCFCFCF);
@@ -169,6 +170,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: _saveBusinessProfile,
             child: const Text('Simpan Profil Bisnis'),
+          ),
+          const Divider(height: 40),
+          const Text('Varian & Tambahan', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'Atur pilihan varian (mis. Hangat/Dingin) dan tambahan (mis. Extra Madu) yang muncul di kasir, termasuk harganya.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VariantsScreen())),
+            icon: const Icon(Icons.tune, size: 18),
+            label: const Text('Kelola Varian & Tambahan'),
           ),
           const Divider(height: 40),
           const Text('Promo', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),

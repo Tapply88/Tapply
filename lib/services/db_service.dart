@@ -4,6 +4,8 @@ import '../models/product.dart';
 import '../models/member.dart';
 import '../models/transaction.dart';
 import '../models/promo.dart';
+import '../models/variation.dart';
+import '../models/addon.dart';
 
 class DbService {
   static const productBox = 'products';
@@ -11,6 +13,8 @@ class DbService {
   static const txBox = 'transactions';
   static const settingsBox = 'settings';
   static const promoBox = 'promos';
+  static const variationBox = 'variations';
+  static const addonBox = 'addons';
   static final _uuid = const Uuid();
 
   static Future<void> init() async {
@@ -20,14 +24,31 @@ class DbService {
     Hive.registerAdapter(TxItemAdapter());
     Hive.registerAdapter(TransactionRecordAdapter());
     Hive.registerAdapter(PromoAdapter());
+    Hive.registerAdapter(VariationAdapter());
+    Hive.registerAdapter(AddonAdapter());
 
     await Hive.openBox<Product>(productBox);
     await Hive.openBox<Member>(memberBox);
     await Hive.openBox<TransactionRecord>(txBox);
     await Hive.openBox(settingsBox);
     await Hive.openBox<Promo>(promoBox);
+    await Hive.openBox<Variation>(variationBox);
+    await Hive.openBox<Addon>(addonBox);
 
     await _seedProductsIfEmpty();
+    await _seedVariantsIfEmpty();
+  }
+
+  static Future<void> _seedVariantsIfEmpty() async {
+    if (variations.isEmpty) {
+      await addVariation('Hangat');
+      await addVariation('Dingin');
+    }
+    if (addons.isEmpty) {
+      await addAddon(name: 'Extra Madu', price: 3000);
+      await addAddon(name: 'Extra Jahe', price: 2000);
+      await addAddon(name: 'Kurang Gula', price: 0);
+    }
   }
 
   static Future<void> _seedProductsIfEmpty() async {
@@ -289,6 +310,44 @@ class DbService {
       return true;
     }).toList();
   }
+
+  // ---- Variations & Add-ons (bisa diedit, bukan hardcode) ----
+  static Box<Variation> get variationsBox => Hive.box<Variation>(variationBox);
+  static Box<Addon> get addonsBox => Hive.box<Addon>(addonBox);
+
+  static List<Variation> get variations => variationsBox.values.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  static List<Addon> get addons => addonsBox.values.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+  static Future<void> addVariation(String name) async {
+    final maxOrder = variationsBox.values.isEmpty ? 0 : variationsBox.values.map((v) => v.sortOrder).reduce((a, b) => a > b ? a : b);
+    final v = Variation(id: _uuid.v4(), name: name, sortOrder: maxOrder + 1);
+    await variationsBox.put(v.id, v);
+  }
+
+  static Future<void> updateVariation(String id, String name) async {
+    final v = variationsBox.get(id);
+    if (v == null) return;
+    v.name = name;
+    await v.save();
+  }
+
+  static Future<void> deleteVariation(String id) async => variationsBox.delete(id);
+
+  static Future<void> addAddon({required String name, required int price}) async {
+    final maxOrder = addonsBox.values.isEmpty ? 0 : addonsBox.values.map((a) => a.sortOrder).reduce((a, b) => a > b ? a : b);
+    final a = Addon(id: _uuid.v4(), name: name, price: price, sortOrder: maxOrder + 1);
+    await addonsBox.put(a.id, a);
+  }
+
+  static Future<void> updateAddon(String id, {required String name, required int price}) async {
+    final a = addonsBox.get(id);
+    if (a == null) return;
+    a.name = name;
+    a.price = price;
+    await a.save();
+  }
+
+  static Future<void> deleteAddon(String id) async => addonsBox.delete(id);
 
   // ---- Cashier session (versi sederhana, per-device) ----
   static String get currentCashierName => settings.get('currentCashierName', defaultValue: '');
