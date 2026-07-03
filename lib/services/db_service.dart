@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../models/promo.dart';
 import '../models/variation.dart';
 import '../models/addon.dart';
+import '../models/shift.dart';
 
 class DbService {
   static const productBox = 'products';
@@ -15,6 +16,7 @@ class DbService {
   static const promoBox = 'promos';
   static const variationBox = 'variations';
   static const addonBox = 'addons';
+  static const shiftBox = 'shifts';
   static final _uuid = const Uuid();
 
   static Future<void> init() async {
@@ -26,6 +28,7 @@ class DbService {
     Hive.registerAdapter(PromoAdapter());
     Hive.registerAdapter(VariationAdapter());
     Hive.registerAdapter(AddonAdapter());
+    Hive.registerAdapter(ShiftAdapter());
 
     await Hive.openBox<Product>(productBox);
     await Hive.openBox<Member>(memberBox);
@@ -34,6 +37,7 @@ class DbService {
     await Hive.openBox<Promo>(promoBox);
     await Hive.openBox<Variation>(variationBox);
     await Hive.openBox<Addon>(addonBox);
+    await Hive.openBox<Shift>(shiftBox);
 
     await _seedProductsIfEmpty();
     await _seedVariantsIfEmpty();
@@ -356,6 +360,54 @@ class DbService {
   static Future<void> setCurrentCashier({required String name, required String email}) async {
     await settings.put('currentCashierName', name);
     await settings.put('currentCashierEmail', email);
+  }
+
+  // ---- Shift (modal awal, end shift, settlement) ----
+  static Box<Shift> get shifts => Hive.box<Shift>(shiftBox);
+
+  static Shift? get currentOpenShift {
+    try {
+      return shifts.values.firstWhere((s) => s.status == 'open');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static List<Shift> get shiftHistory => shifts.values.toList()..sort((a, b) => b.startTime.compareTo(a.startTime));
+
+  static Future<Shift> startShift({required int startingCash}) async {
+    final shift = Shift(
+      id: _uuid.v4(),
+      cashierName: currentCashierName,
+      cashierEmail: currentCashierEmail,
+      startTime: DateTime.now(),
+      startingCash: startingCash,
+    );
+    await shifts.put(shift.id, shift);
+    return shift;
+  }
+
+  static Future<void> endShift({required int endingCashCounted, String? note}) async {
+    final shift = currentOpenShift;
+    if (shift == null) return;
+    shift.endTime = DateTime.now();
+    shift.endingCashCounted = endingCashCounted;
+    shift.status = 'closed';
+    shift.note = note;
+    await shift.save();
+  }
+
+  /// Rincian penjualan (per metode bayar) selama shift berjalan (dari startTime s/d sekarang atau endTime).
+  static Map<String, int> salesDuringShift(Shift shift) {
+    final to = shift.endTime ?? DateTime.now();
+    return salesByPaymentMethod(from: shift.startTime, to: to);
+  }
+
+  /// Total cash yang seharusnya ada di laci: modal awal + total penjualan cash selama shift.
+  static int expectedCashForShift(Shift shift) {
+    final bySales = salesDuringShift(shift);
+    final cashSales = bySales['cash'] ?? 0;
+    return shift.startingCash + cashSales;
   }
 
   // ---- Receipt & queue numbering ----
