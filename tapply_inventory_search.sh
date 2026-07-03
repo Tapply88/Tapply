@@ -1,3 +1,4 @@
+cat > lib/screens/inventory_screen.dart << 'INVEOF'
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -377,3 +378,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 }
+INVEOF
+
+echo 'Selesai. Jalankan: flutter clean && flutter pub get && flutter run -d web-server --web-port 8080 --release'
