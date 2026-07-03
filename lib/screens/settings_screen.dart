@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/db_service.dart';
+import 'promo_screen.dart';
 
 const _navy = Color(0xFF092762);
 const _grey = Color(0xFFCFCFCF);
@@ -161,10 +162,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Simpan Profil Bisnis'),
           ),
           const Divider(height: 40),
-          const Text('Tax, Service, Diskon & Pembulatan', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const Text('Promo', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
           const SizedBox(height: 4),
           const Text(
-            'Opsional. Nanti bisa juga diatur dari dashboard admin (website) — untuk sekarang atur di sini.',
+            'Bikin promo dengan tanggal berlaku, jenis diskon (persen/nominal), dan minimum pembelian. '
+            'Kalau ada promo yang valid saat checkout, itu dipakai otomatis (yang diskonnya paling besar kalau ada beberapa).',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen())),
+            icon: const Icon(Icons.local_offer_outlined, size: 18),
+            label: const Text('Kelola Promo'),
+          ),
+          const Divider(height: 40),
+          const Text('Tax, Service, Diskon Manual & Pembulatan', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
+          const SizedBox(height: 4),
+          const Text(
+            'Diskon manual di bawah ini dipakai kalau TIDAK ada promo bertanggal yang sedang valid.',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 12),

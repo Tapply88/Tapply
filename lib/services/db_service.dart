@@ -3,12 +3,14 @@ import 'package:uuid/uuid.dart';
 import '../models/product.dart';
 import '../models/member.dart';
 import '../models/transaction.dart';
+import '../models/promo.dart';
 
 class DbService {
   static const productBox = 'products';
   static const memberBox = 'members';
   static const txBox = 'transactions';
   static const settingsBox = 'settings';
+  static const promoBox = 'promos';
   static final _uuid = const Uuid();
 
   static Future<void> init() async {
@@ -17,11 +19,13 @@ class DbService {
     Hive.registerAdapter(MemberAdapter());
     Hive.registerAdapter(TxItemAdapter());
     Hive.registerAdapter(TransactionRecordAdapter());
+    Hive.registerAdapter(PromoAdapter());
 
     await Hive.openBox<Product>(productBox);
     await Hive.openBox<Member>(memberBox);
     await Hive.openBox<TransactionRecord>(txBox);
     await Hive.openBox(settingsBox);
+    await Hive.openBox<Promo>(promoBox);
 
     await _seedProductsIfEmpty();
   }
@@ -218,12 +222,11 @@ class DbService {
     if (roundingNearest != null) await settings.put('roundingNearest', roundingNearest);
   }
 
-  /// Hitung rincian total dari subtotal item: {tax, service, discount, rounding, grandTotal}
-  static Map<String, int> computeTotals(int subtotal) {
+  /// Hitung rincian total dari subtotal item + diskon yang SUDAH ditentukan (bukan nebak sendiri).
+  static Map<String, int> computeTotals(int subtotal, {int discountAmount = 0}) {
     final tax = taxEnabled ? (subtotal * taxPercent / 100).round() : 0;
     final service = serviceEnabled ? (subtotal * servicePercent / 100).round() : 0;
-    final discount = discountEnabled ? (subtotal * discountPercent / 100).round() : 0;
-    final preRounding = subtotal + tax + service - discount;
+    final preRounding = subtotal + tax + service - discountAmount;
     int rounding = 0;
     int grandTotal = preRounding;
     if (roundingEnabled && roundingNearest > 0) {
@@ -234,10 +237,37 @@ class DbService {
     return {
       'tax': tax,
       'service': service,
-      'discount': discount,
+      'discount': discountAmount,
       'rounding': rounding,
       'grandTotal': grandTotal,
     };
+  }
+
+  // ---- Promos ----
+  static Box<Promo> get promos => Hive.box<Promo>(promoBox);
+
+  static Future<void> savePromo(Promo promo) async {
+    await promos.put(promo.id, promo);
+  }
+
+  static Future<void> deletePromo(String promoId) async {
+    await promos.delete(promoId);
+  }
+
+  static int promoDiscountAmount(Promo p, int subtotal) =>
+      p.discountType == 'percentage' ? (subtotal * p.value / 100).round() : p.value.round();
+
+  /// Semua promo yang aktif, dalam rentang tanggal, dan memenuhi minimum pembelian
+  /// untuk subtotal ini — dipakai buat nampilin pilihan ke kasir.
+  static List<Promo> validPromosFor(int subtotal) {
+    final now = DateTime.now();
+    return promos.values.where((p) {
+      if (!p.active) return false;
+      if (p.startDate != null && now.isBefore(p.startDate!)) return false;
+      if (p.endDate != null && now.isAfter(p.endDate!)) return false;
+      if (subtotal < p.minPurchase) return false;
+      return true;
+    }).toList();
   }
 
   // ---- Transactions ----
@@ -255,6 +285,7 @@ class DbService {
     int discountAmount = 0,
     int roundingAdjustment = 0,
     String? guestName,
+    String? discountLabel,
   }) async {
     final subtotal = items.fold<int>(0, (sum, i) => sum + i.subtotal);
     final grandTotal = subtotal + taxAmount + serviceAmount - discountAmount + roundingAdjustment;
@@ -273,6 +304,7 @@ class DbService {
       discountAmount: discountAmount,
       roundingAdjustment: roundingAdjustment,
       guestName: guestName,
+      discountLabel: discountLabel,
     );
     await transactions.put(tx.id, tx);
 
@@ -312,6 +344,16 @@ class DbService {
       for (final item in t.items) {
         result[item.productName] = (result[item.productName] ?? 0) + item.qty;
       }
+    }
+    return result;
+  }
+
+  static Map<String, int> salesByPaymentMethod({DateTime? from, DateTime? to}) {
+    final result = <String, int>{};
+    for (final t in transactions.values.where((t) => t.status == 'paid')) {
+      if (from != null && t.createdAt.isBefore(from)) continue;
+      if (to != null && t.createdAt.isAfter(to)) continue;
+      result[t.paymentMethod] = (result[t.paymentMethod] ?? 0) + t.total;
     }
     return result;
   }

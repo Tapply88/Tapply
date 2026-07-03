@@ -86,6 +86,24 @@ class ReportScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 20),
+          const Text('Penjualan per Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          ...(() {
+            final byMethod = DbService.salesByPaymentMethod();
+            final sorted = byMethod.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+            if (sorted.isEmpty) {
+              return [const Text('Belum ada transaksi.', style: TextStyle(fontSize: 12, color: Colors.grey))];
+            }
+            return sorted
+                .map((e) => ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.payments_outlined, size: 18, color: _navy),
+                      title: Text(paymentMethodLabel(e.key)),
+                      trailing: Text(currency.format(e.value), style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                    ))
+                .toList();
+          })(),
+          const SizedBox(height: 20),
           const Text('Produk Terlaris (semua waktu)', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ...sortedEntries.map((e) => ListTile(

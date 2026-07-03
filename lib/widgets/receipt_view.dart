@@ -96,7 +96,7 @@ class ReceiptView extends StatelessWidget {
         if (tx.discountAmount > 0)
           _row(
             currency,
-            DbService.discountPromoName.isNotEmpty ? 'Discount (${DbService.discountPromoName})' : 'Discount',
+            (tx.discountLabel != null && tx.discountLabel!.isNotEmpty) ? 'Discount (${tx.discountLabel})' : 'Discount',
             -tx.discountAmount,
           ),
         _row(currency, 'Rounding', tx.roundingAdjustment),
