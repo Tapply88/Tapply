@@ -189,6 +189,8 @@ class DbService {
   static int get roundingNearest => settings.get('roundingNearest', defaultValue: 100);
   static bool get showZeroAmountRows => settings.get('showZeroAmountRows', defaultValue: false);
   static Future<void> setShowZeroAmountRows(bool v) async => settings.put('showZeroAmountRows', v);
+  static bool get printCheckEnabled => settings.get('printCheckEnabled', defaultValue: true);
+  static Future<void> setPrintCheckEnabled(bool v) async => settings.put('printCheckEnabled', v);
 
   static Future<void> updateBusinessProfile({
     String? businessName,

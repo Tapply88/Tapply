@@ -1,3 +1,4 @@
+cat > lib/screens/cashier_screen.dart << 'CASHIEREOF'
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -1485,3 +1486,6 @@ class _CashierScreenState extends State<CashierScreen> {
     );
   }
 }
+CASHIEREOF
+
+echo 'Selesai. Jalankan: flutter clean && flutter pub get && flutter run -d web-server --web-port 8080 --release'

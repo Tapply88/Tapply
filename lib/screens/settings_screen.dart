@@ -32,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _roundingNearest;
   late bool _queueNumberEnabled;
   late bool _showZeroAmountRows;
+  late bool _printCheckEnabled;
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _roundingNearest = DbService.roundingNearest;
     _queueNumberEnabled = DbService.queueNumberEnabled;
     _showZeroAmountRows = DbService.showZeroAmountRows;
+    _printCheckEnabled = DbService.printCheckEnabled;
   }
 
   Future<void> _pickLogo() async {
@@ -273,6 +275,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (v) async {
               setState(() => _showZeroAmountRows = v);
               await DbService.setShowZeroAmountRows(v);
+            },
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Tombol Print Check'),
+            subtitle: const Text('Opsional — preview bill sebelum bayar (beda dari struk final setelah bayar)', style: TextStyle(fontSize: 11)),
+            value: _printCheckEnabled,
+            onChanged: (v) async {
+              setState(() => _printCheckEnabled = v);
+              await DbService.setPrintCheckEnabled(v);
             },
           ),
           const SizedBox(height: 16),

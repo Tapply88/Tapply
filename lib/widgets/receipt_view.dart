@@ -41,9 +41,31 @@ class ReceiptView extends StatelessWidget {
       customerName = tx.guestName;
     }
 
+    final isClosed = tx.paymentMethod != 'belum dibayar';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isClosed ? Colors.green.shade50 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: isClosed ? Colors.green : Colors.orange),
+            ),
+            child: Text(
+              isClosed ? 'LUNAS — BILL DITUTUP' : 'CHECK — BELUM DIBAYAR',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+                color: isClosed ? Colors.green.shade800 : Colors.orange.shade800,
+              ),
+            ),
+          ),
+        ),
         Center(
           child: Column(
             children: [
