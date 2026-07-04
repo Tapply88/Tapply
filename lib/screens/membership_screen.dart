@@ -32,20 +32,20 @@ class _MembershipScreenState extends State<MembershipScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Daftar Member Baru'),
+        title: const Text('Register New Member'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'No. HP'), keyboardType: TextInputType.phone),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number'), keyboardType: TextInputType.phone),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Simpan'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -76,8 +76,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Daftar lengkap member (semua data pelanggan) akan tersedia di dashboard admin. '
-              'Di sini kasir hanya bisa cari 1 nomor untuk cek poin atau daftarkan member baru.',
+              'The full member list (all customer data) is available in the admin dashboard. '
+              'Here the cashier can only search one number to check points or register a new member.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -87,7 +87,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   child: TextField(
                     controller: _searchCtrl,
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Cari no. HP', hintText: '08xxxxxxxxxx'),
+                    decoration: const InputDecoration(labelText: 'Search by phone number', hintText: '08xxxxxxxxxx'),
                     onSubmitted: (_) => _search(),
                   ),
                 ),
@@ -95,7 +95,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: _navy),
                   onPressed: _search,
-                  child: const Text('Cari'),
+                  child: const Text('Search'),
                 ),
               ],
             ),
@@ -106,19 +106,19 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   leading: CircleAvatar(child: Text(_found!.name.isNotEmpty ? _found!.name[0].toUpperCase() : '?')),
                   title: Text(_found!.name),
                   subtitle: Text(_found!.phone),
-                  trailing: Text('${_found!.points} poin', style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                  trailing: Text('${_found!.points} points', style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
                 ),
               )
             else if (_searched && _found == null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Member tidak ditemukan.'),
+                  const Text('Member not found.'),
                   const SizedBox(height: 8),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: _addMember,
-                    child: const Text('Daftarkan Member Baru'),
+                    child: const Text('Register New Member'),
                   ),
                 ],
               ),

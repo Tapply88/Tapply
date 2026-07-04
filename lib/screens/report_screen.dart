@@ -25,7 +25,7 @@ class ReportScreen extends StatelessWidget {
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup'),
+                    child: const Text('Close'),
                   ),
                 ],
               ),
@@ -50,7 +50,7 @@ class ReportScreen extends StatelessWidget {
     final lowStock = DbService.products.values.where((p) => p.stock <= 5).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Laporan Penjualan')),
+      appBar: AppBar(title: const Text('Sales Report')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -61,7 +61,7 @@ class ReportScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Penjualan Hari Ini'),
+                  const Text('Today\'s Sales'),
                   const SizedBox(height: 4),
                   Text(currency.format(todayTotal), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                 ],
@@ -77,22 +77,22 @@ class ReportScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('⚠ Stok Menipis (${lowStock.length} produk)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800)),
+                    Text('⚠ Low Stock (${lowStock.length} products)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800)),
                     const SizedBox(height: 8),
-                    ...lowStock.map((p) => Text('${p.name} — sisa ${p.stock}', style: TextStyle(color: Colors.red.shade800))),
+                    ...lowStock.map((p) => Text('${p.name} — ${p.stock} left', style: TextStyle(color: Colors.red.shade800))),
                   ],
                 ),
               ),
             ),
           ],
           const SizedBox(height: 20),
-          const Text('Penjualan per Metode Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Sales by Payment Method', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ...(() {
             final byMethod = DbService.salesByPaymentMethod();
             final sorted = byMethod.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
             if (sorted.isEmpty) {
-              return [const Text('Belum ada transaksi.', style: TextStyle(fontSize: 12, color: Colors.grey))];
+              return [const Text('No transactions yet.', style: TextStyle(fontSize: 12, color: Colors.grey))];
             }
             return sorted
                 .map((e) => ListTile(
@@ -104,16 +104,16 @@ class ReportScreen extends StatelessWidget {
                 .toList();
           })(),
           const SizedBox(height: 20),
-          const Text('Produk Terlaris (semua waktu)', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Best-selling Products (all time)', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           ...sortedEntries.map((e) => ListTile(
                 dense: true,
                 title: Text(e.key),
-                trailing: Text('${e.value} terjual'),
+                trailing: Text('${e.value} sold'),
               )),
           const SizedBox(height: 20),
-          const Text('Riwayat Transaksi', style: TextStyle(fontWeight: FontWeight.bold)),
-          const Text('Tap untuk lihat struk lengkap', style: TextStyle(fontSize: 11, color: Colors.grey)),
+          const Text('Transaction History', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Tap to view full receipt', style: TextStyle(fontSize: 11, color: Colors.grey)),
           const SizedBox(height: 8),
           ...allTx.take(100).map((t) => ListTile(
                 dense: true,

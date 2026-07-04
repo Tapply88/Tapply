@@ -34,13 +34,13 @@ class _PromoScreenState extends State<PromoScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: Text(existing == null ? 'Promo Baru' : 'Edit Promo', style: const TextStyle(color: _navy)),
+            title: Text(existing == null ? 'New Promo' : 'Edit Promo', style: const TextStyle(color: _navy)),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama promo', hintText: 'mis. Promo Ramadan')),
+                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Promo name', hintText: 'mis. Promo Ramadan')),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -67,7 +67,7 @@ class _PromoScreenState extends State<PromoScreen> {
                   TextField(
                     controller: valueCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: discountType == 'percentage' ? 'Besaran diskon (%)' : 'Besaran diskon (Rp)'),
+                    decoration: InputDecoration(labelText: discountType == 'percentage' ? 'Discount amount (%)' : 'Discount amount (Rp)'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -90,7 +90,7 @@ class _PromoScreenState extends State<PromoScreen> {
                             );
                             if (picked != null) setDialogState(() => startDate = picked);
                           },
-                          child: Text(startDate == null ? 'Tanggal mulai' : _dateFmt.format(startDate!), style: const TextStyle(fontSize: 12)),
+                          child: Text(startDate == null ? 'Start date' : _dateFmt.format(startDate!), style: const TextStyle(fontSize: 12)),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -106,34 +106,34 @@ class _PromoScreenState extends State<PromoScreen> {
                             );
                             if (picked != null) setDialogState(() => endDate = picked);
                           },
-                          child: Text(endDate == null ? 'Tanggal selesai' : _dateFmt.format(endDate!), style: const TextStyle(fontSize: 12)),
+                          child: Text(endDate == null ? 'End date' : _dateFmt.format(endDate!), style: const TextStyle(fontSize: 12)),
                         ),
                       ),
                     ],
                   ),
-                  const Text('Kosongkan tanggal kalau mau berlaku terus-menerus.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  const Text('Leave dates blank to run indefinitely.', style: TextStyle(fontSize: 11, color: Colors.grey)),
                   const SizedBox(height: 12),
-                  const Text('BERLAKU UNTUK', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const Text('APPLIES TO', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Seluruh Struk', style: TextStyle(fontSize: 13)),
-                    subtitle: const Text('Diskon dihitung dari total belanja', style: TextStyle(fontSize: 11)),
+                    title: const Text('Entire Receipt', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Discount calculated from total spend', style: TextStyle(fontSize: 11)),
                     value: 'cart',
                     groupValue: scope,
                     onChanged: (v) => setDialogState(() => scope = v!),
                   ),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Produk Tertentu (preset)', style: TextStyle(fontSize: 13)),
-                    subtitle: const Text('Otomatis kepakai kalau produk yang dicentang ada di keranjang', style: TextStyle(fontSize: 11)),
+                    title: const Text('Specific Products (preset)', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Automatically applied when checked products are in the cart', style: TextStyle(fontSize: 11)),
                     value: 'product',
                     groupValue: scope,
                     onChanged: (v) => setDialogState(() => scope = v!),
                   ),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Per Item (opsional saat transaksi)', style: TextStyle(fontSize: 13)),
-                    subtitle: const Text('Kasir centang manual per produk pas nambahin ke keranjang, mis. diskon bawa tumbler sendiri', style: TextStyle(fontSize: 11)),
+                    title: const Text('Per Item (optional at checkout)', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Cashier checks it manually per product when adding to cart, e.g. discount for bringing your own tumbler', style: TextStyle(fontSize: 11)),
                     value: 'item',
                     groupValue: scope,
                     onChanged: (v) => setDialogState(() => scope = v!),
@@ -141,7 +141,7 @@ class _PromoScreenState extends State<PromoScreen> {
                   if (scope == 'product' || scope == 'item') ...[
                     const SizedBox(height: 4),
                     Text(
-                      scope == 'item' ? 'Batasi ke produk tertentu (opsional, kosongkan = berlaku semua produk):' : 'Pilih produk:',
+                      scope == 'item' ? 'Limit to specific products (optional, leave blank = applies to all products):' : 'Select products:',
                       style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
@@ -171,14 +171,14 @@ class _PromoScreenState extends State<PromoScreen> {
                     if (scope == 'product' && selectedProductIds.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: 4),
-                        child: Text('Pilih minimal 1 produk.', style: TextStyle(fontSize: 11, color: Colors.red)),
+                        child: Text('Select at least 1 product.', style: TextStyle(fontSize: 11, color: Colors.red)),
                       ),
                   ],
                   const SizedBox(height: 12),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     activeThumbColor: _navy,
-                    title: const Text('Aktif'),
+                    title: const Text('Active'),
                     value: active,
                     onChanged: (v) => setDialogState(() => active = v),
                   ),
@@ -186,7 +186,7 @@ class _PromoScreenState extends State<PromoScreen> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: _navy),
                 onPressed: () async {
@@ -208,7 +208,7 @@ class _PromoScreenState extends State<PromoScreen> {
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) setState(() {});
                 },
-                child: const Text('Simpan'),
+                child: const Text('Save'),
               ),
             ],
           );
@@ -221,11 +221,11 @@ class _PromoScreenState extends State<PromoScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Promo?'),
-        content: Text('Yakin mau hapus "${p.name}"?'),
+        title: const Text('Delete Promo?'),
+        content: Text('Are you sure you want to delete "${p.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -246,7 +246,7 @@ class _PromoScreenState extends State<PromoScreen> {
         actions: [IconButton(onPressed: () => _editPromo(), icon: const Icon(Icons.add))],
       ),
       body: promos.isEmpty
-          ? const Center(child: Text('Belum ada promo. Tap + buat bikin.', style: TextStyle(color: Colors.grey)))
+          ? const Center(child: Text('No promos yet. Tap + to create one.', style: TextStyle(color: Colors.grey)))
           : ListView.builder(
               itemCount: promos.length,
               itemBuilder: (ctx, i) {
@@ -254,20 +254,20 @@ class _PromoScreenState extends State<PromoScreen> {
                 final valueLabel = p.discountType == 'percentage' ? '${p.value.toStringAsFixed(0)}%' : _currency.format(p.value.round());
                 final dateLabel = (p.startDate != null || p.endDate != null)
                     ? '${p.startDate != null ? _dateFmt.format(p.startDate!) : 'kapan aja'} — ${p.endDate != null ? _dateFmt.format(p.endDate!) : 'seterusnya'}'
-                    : 'Berlaku terus-menerus';
+                    : 'Runs indefinitely';
                 return ListTile(
                   leading: Icon(Icons.local_offer, color: p.active ? _navy : Colors.grey),
                   title: Text(p.name, style: TextStyle(color: p.active ? _navy : Colors.grey, fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                    'Diskon $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}'
-                    '${p.scope == 'product' ? ' • ${p.productIds.length} produk (preset)' : p.scope == 'item' ? ' • per item${p.productIds.isNotEmpty ? ' (${p.productIds.length} produk)' : ' (semua produk)'}' : ' • seluruh struk'}\n$dateLabel',
+                    'Discount $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}'
+                    '${p.scope == 'product' ? ' • ${p.productIds.length} products (preset)' : p.scope == 'item' ? ' • per item${p.productIds.isNotEmpty ? ' (${p.productIds.length} products)' : ' (all products)'}' : ' • entire receipt'}\n$dateLabel',
                     style: const TextStyle(fontSize: 12),
                   ),
                   isThreeLine: true,
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!p.active) const Text('Nonaktif', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      if (!p.active) const Text('Inactive', style: TextStyle(fontSize: 10, color: Colors.grey)),
                       IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _editPromo(existing: p)),
                       IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red), onPressed: () => _deletePromo(p)),
                     ],

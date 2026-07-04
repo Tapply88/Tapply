@@ -57,20 +57,20 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hubungkan ke Dashboard', style: TextStyle(color: _navy)),
+        title: const Text('Connect to Dashboard', style: TextStyle(color: _navy)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Ambil URL server & kode API dari dashboard web → Setelan → Sinkronisasi.',
+                'Get the server URL & API code from the web dashboard → Settings → Sync.',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 12),
               TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'URL Server Sync'), keyboardType: TextInputType.url),
               const SizedBox(height: 8),
-              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'Kode API')),
+              TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API Code')),
             ],
           ),
         ),
@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (urlCtrl.text.trim().isEmpty || keyCtrl.text.trim().isEmpty) return;
               Navigator.pop(ctx, true);
             },
-            child: const Text('Hubungkan'),
+            child: const Text('Connect'),
           ),
         ],
       ),
@@ -156,10 +156,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Image.asset('assets/logo.png', height: 140),
                 const SizedBox(height: 24),
-                const Text('Device Belum Terhubung', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
+                const Text('Device Not Connected', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
                 const SizedBox(height: 8),
                 const Text(
-                  'Hubungkan device ini ke dashboard bisnis kamu dulu.',
+                  'Connect this device to your business dashboard first.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey),
                 ),
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: _navy, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),
                   onPressed: _openPairingForm,
-                  child: const Text('Hubungkan Sekarang'),
+                  child: const Text('Connect Now'),
                 ),
               ],
             ),

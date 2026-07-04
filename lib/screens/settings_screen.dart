@@ -26,21 +26,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Koneksi Dashboard', style: TextStyle(color: _navy)),
+        title: const Text('Dashboard Connection', style: TextStyle(color: _navy)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'URL Server Sync')),
             const SizedBox(height: 8),
-            TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'Kode API')),
+            TextField(controller: keyCtrl, decoration: const InputDecoration(labelText: 'API Code')),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Simpan'),
+            child: const Text('Save'),
           ),
         ],
       ),
