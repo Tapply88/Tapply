@@ -219,6 +219,14 @@ app.post('/sync/product', async (req, res) => {
       stock: p.stock,
       sort_order: p.sortOrder,
       is_active: p.isActive,
+      sku: p.sku,
+      volume: p.volume,
+      label_size: p.labelSize,
+      show_price_on_label: p.showPriceOnLabel,
+      label_variant: p.labelVariant,
+      label_addons: p.labelAddons || [],
+      expiry_date: p.expiryDate ? p.expiryDate.substring(0, 10) : null,
+      production_date: p.productionDate ? p.productionDate.substring(0, 10) : null,
     });
 
     if (upsertError) {
@@ -277,17 +285,20 @@ app.get('/sync/pull', async (req, res) => {
     const apiKey = req.headers['x-api-key'];
     if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
 
-    const { data: business, error: businessError } = await supabaseAdmin
+    const { data: businessFull, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('id')
+      .select('*')
       .eq('sync_api_key', apiKey)
       .single();
-    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+    if (businessError || !businessFull) return res.status(401).json({ error: 'API key gak valid' });
+    const business = businessFull;
 
-    const [{ data: products }, { data: members }, { data: promos }] = await Promise.all([
+    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }] = await Promise.all([
       supabaseAdmin.from('products').select('*').eq('business_id', business.id),
       supabaseAdmin.from('members').select('*').eq('business_id', business.id),
       supabaseAdmin.from('promos').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('variations').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('addons').select('*').eq('business_id', business.id),
     ]);
 
     res.json({
@@ -299,6 +310,15 @@ app.get('/sync/pull', async (req, res) => {
         stock: p.stock,
         sortOrder: p.sort_order,
         isActive: p.is_active,
+        sku: p.sku,
+        volume: p.volume,
+        labelSize: p.label_size,
+        showPriceOnLabel: p.show_price_on_label,
+        labelVariant: p.label_variant,
+        labelAddons: p.label_addons || [],
+        expiryDate: p.expiry_date,
+        productionDate: p.production_date,
+        imageBase64: p.image_base64,
       })),
       members: (members || []).map((m) => ({
         id: m.id,
@@ -318,6 +338,33 @@ app.get('/sync/pull', async (req, res) => {
         minPurchase: p.min_purchase,
         active: p.active,
       })),
+      variations: (variations || []).map((v) => ({
+        id: v.id,
+        name: v.name,
+        sortOrder: v.sort_order,
+      })),
+      addons: (addons || []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        price: a.price,
+        sortOrder: a.sort_order,
+      })),
+      business: {
+        name: business.name,
+        address: business.address,
+        phone: business.phone,
+        footerText: business.footer_text,
+        taxPercent: business.tax_percent,
+        servicePercent: business.service_percent,
+        discountPercent: business.discount_percent,
+        roundingEnabled: business.rounding_enabled,
+        roundingNearest: business.rounding_nearest,
+        managerPin: business.manager_pin,
+        pinRequiredForCancel: business.pin_required_for_cancel,
+        printCheckEnabled: business.print_check_enabled,
+        queueNumberEnabled: business.queue_number_enabled,
+        queueStartNumber: business.queue_start_number,
+      },
     });
   } catch (err) {
     console.error(err);

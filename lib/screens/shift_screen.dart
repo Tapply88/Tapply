@@ -136,7 +136,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(shift.cashierName.isEmpty ? 'Kasir' : shift.cashierName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
+                  Text(shift.cashierName.isEmpty ? 'Cashier' : shift.cashierName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
                   Text('Mulai: ${_dateFmt.format(shift.startTime)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   if (shift.endTime != null) Text('Selesai: ${_dateFmt.format(shift.endTime!)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   const Divider(height: 20),

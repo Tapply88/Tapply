@@ -25,7 +25,7 @@ String paymentMethodLabel(String code) {
   }
 }
 
-/// Widget struk yang dipakai ulang di: halaman setelah bayar & history transaksi.
+/// Receipt widget reused on: post-payment screen & transaction history.
 class ReceiptView extends StatelessWidget {
   final TransactionRecord tx;
   const ReceiptView({super.key, required this.tx});
@@ -41,7 +41,7 @@ class ReceiptView extends StatelessWidget {
       customerName = tx.guestName;
     }
 
-    final isClosed = tx.paymentMethod != 'belum dibayar';
+    final isClosed = tx.paymentMethod != 'unpaid';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -68,7 +68,7 @@ class ReceiptView extends StatelessWidget {
               border: Border.all(color: isClosed ? Colors.green : Colors.orange),
             ),
             child: Text(
-              isClosed ? 'LUNAS — BILL DITUTUP' : 'CHECK — BELUM DIBAYAR',
+              isClosed ? 'PAID — BILL CLOSED' : 'CHECK — UNPAID',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
@@ -99,20 +99,14 @@ class ReceiptView extends StatelessWidget {
         ),
         const Divider(height: 24),
         if (tx.receiptNumber != null)
-          Text('No. Struk: ${tx.receiptNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          Text('Receipt No.: ${tx.receiptNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
         Text('Order ID: ${tx.id.substring(0, tx.id.length >= 8 ? 8 : tx.id.length).toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
         Text(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt), style: const TextStyle(fontSize: 11, color: Colors.grey)),
         Text(tx.salesType, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         if (customerName != null)
-          Text('Pelanggan: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text('Bayar: ${paymentMethodLabel(tx.paymentMethod)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        if (tx.paymentMethod == 'cash' && tx.cashReceived != null) ...[
-          Text('Tunai: ${currency.format(tx.cashReceived)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          if (tx.changeAmount != null && tx.changeAmount! > 0)
-            Text('Kembalian: ${currency.format(tx.changeAmount)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
+          Text('Customer: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
         if (tx.cashierName != null && tx.cashierName!.isNotEmpty)
-          Text('Dilayani oleh: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Served by: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 8),
         ...tx.items.map((item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
@@ -146,6 +140,13 @@ class ReceiptView extends StatelessWidget {
         if (DbService.showZeroAmountRows || tx.roundingAdjustment != 0) _row(currency, 'Rounding', tx.roundingAdjustment),
         const Divider(height: 20),
         _row(currency, 'Total', tx.total, bold: true),
+        const SizedBox(height: 10),
+        // Payment method + cash tendered/change go right below the total.
+        _row(currency, 'Payment', 0, textValue: paymentMethodLabel(tx.paymentMethod)),
+        if (tx.paymentMethod == 'cash' && tx.cashReceived != null) ...[
+          _row(currency, 'Cash Received', tx.cashReceived!),
+          if (tx.changeAmount != null && tx.changeAmount! > 0) _row(currency, 'Change', tx.changeAmount!),
+        ],
         const SizedBox(height: 20),
         Center(child: Text(DbService.receiptFooterText, style: const TextStyle(fontSize: 12, color: Colors.grey))),
         const SizedBox(height: 16),
@@ -162,7 +163,7 @@ class ReceiptView extends StatelessWidget {
     );
   }
 
-  Widget _row(NumberFormat currency, String label, int amount, {bool bold = false}) {
+  Widget _row(NumberFormat currency, String label, int amount, {bool bold = false, String? textValue}) {
     final style = TextStyle(
       fontSize: bold ? 15 : 13,
       fontWeight: bold ? FontWeight.bold : FontWeight.normal,
@@ -174,7 +175,7 @@ class ReceiptView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: style),
-          Text(currency.format(amount), style: style),
+          Text(textValue ?? currency.format(amount), style: style),
         ],
       ),
     );

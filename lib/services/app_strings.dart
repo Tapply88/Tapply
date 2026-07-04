@@ -6,7 +6,7 @@ import 'db_service.dart';
 class AppStrings {
   static const Map<String, Map<String, String>> _strings = {
     // Bottom nav
-    'nav_kasir': {'id': 'Kasir', 'en': 'Cashier'},
+    'nav_kasir': {'id': 'POS', 'en': 'POS'},
     'nav_member': {'id': 'Member', 'en': 'Member'},
     'nav_inventory': {'id': 'Inventory', 'en': 'Inventory'},
     'nav_laporan': {'id': 'Laporan', 'en': 'Report'},

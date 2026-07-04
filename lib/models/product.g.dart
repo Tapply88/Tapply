@@ -29,13 +29,17 @@ class ProductAdapter extends TypeAdapter<Product> {
       expiryDate: fields[9] as DateTime?,
       volume: fields[10] as String?,
       productionDate: fields[11] as DateTime?,
+      labelSize: fields[12] as String,
+      showPriceOnLabel: fields[13] as bool,
+      labelVariant: fields[14] as String?,
+      labelAddons: (fields[15] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +63,15 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(10)
       ..write(obj.volume)
       ..writeByte(11)
-      ..write(obj.productionDate);
+      ..write(obj.productionDate)
+      ..writeByte(12)
+      ..write(obj.labelSize)
+      ..writeByte(13)
+      ..write(obj.showPriceOnLabel)
+      ..writeByte(14)
+      ..write(obj.labelVariant)
+      ..writeByte(15)
+      ..write(obj.labelAddons);
   }
 
   @override

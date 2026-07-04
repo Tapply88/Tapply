@@ -11,7 +11,6 @@ import '../models/held_bill.dart';
 import '../services/db_service.dart';
 import '../widgets/receipt_view.dart';
 import 'shift_screen.dart';
-import '../services/app_strings.dart';
 
 const _navy = Color(0xFF092762);
 const _grey = Color(0xFFCFCFCF);
@@ -43,7 +42,7 @@ class CartLine {
     final parts = <String>[];
     if (variation.isNotEmpty) parts.add(variation);
     if (addons.isNotEmpty) parts.add(addons.join(', '));
-    if (memberDiscount) parts.add('Diskon member 10%');
+    if (memberDiscount) parts.add('Member discount 10%');
     return parts.join(' • ');
   }
 }
@@ -82,22 +81,22 @@ class _CashierScreenState extends State<CashierScreen> {
       context: context,
       barrierDismissible: DbService.currentCashierName.isNotEmpty,
       builder: (ctx) => AlertDialog(
-        title: const Text('Siapa yang jaga kasir?', style: TextStyle(color: _navy)),
+        title: const Text('Who is working this shift?', style: TextStyle(color: _navy)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Nama & email ini muncul di struk sebagai "Dilayani oleh". Versi sederhana — belum tersambung ke login berbasis akun di dashboard web.',
+              'This name & email show on the receipt as "Served by". Simple version — not yet connected to account-based login on the dashboard.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama Kasir')),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Cashier Name')),
             const SizedBox(height: 8),
-            TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email Kasir'), keyboardType: TextInputType.emailAddress),
+            TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Cashier Email'), keyboardType: TextInputType.emailAddress),
           ],
         ),
         actions: [
-          if (DbService.currentCashierName.isNotEmpty) TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          if (DbService.currentCashierName.isNotEmpty) TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: () async {
@@ -106,7 +105,7 @@ class _CashierScreenState extends State<CashierScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
               if (mounted) setState(() {});
             },
-            child: const Text('Simpan'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -225,22 +224,22 @@ class _CashierScreenState extends State<CashierScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: const Text('Pilih Promo', style: TextStyle(color: _navy)),
+            title: const Text('Select Promo', style: TextStyle(color: _navy)),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Tanpa Promo'),
+                    title: const Text('No Promo'),
                     value: 'NONE',
                     groupValue: temp,
                     onChanged: (v) => setDialogState(() => temp = v),
                   ),
                   ...valid.map((p) {
                     final subtitleText = p.scope == 'item'
-                        ? '${p.discountType == 'fixed' ? '-${_currency.format(p.value.round())}' : '-${p.value.toStringAsFixed(0)}%'} per item • dicentang saat tambah produk'
-                        : '-${_currency.format(DbService.promoDiscountAmount(p, cartSubtotal: _subtotal, productSubtotals: _productSubtotals, productQuantities: _productQuantities))}${p.scope == 'product' ? ' • produk tertentu' : ''}';
+                        ? '${p.discountType == 'fixed' ? '-${_currency.format(p.value.round())}' : '-${p.value.toStringAsFixed(0)}%'} per item • checked when adding the product'
+                        : '-${_currency.format(DbService.promoDiscountAmount(p, cartSubtotal: _subtotal, productSubtotals: _productSubtotals, productQuantities: _productQuantities))}${p.scope == 'product' ? ' • specific product' : ''}';
                     return RadioListTile<String>(
                       contentPadding: EdgeInsets.zero,
                       title: Text(p.name),
@@ -254,7 +253,7 @@ class _CashierScreenState extends State<CashierScreen> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: _navy),
                 onPressed: () => Navigator.pop(ctx, temp),
@@ -276,28 +275,28 @@ class _CashierScreenState extends State<CashierScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Item Custom', style: TextStyle(color: _navy)),
+        title: const Text('Custom Item', style: TextStyle(color: _navy)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Buat item yang gak ada di menu, mis. biaya jasa, item pesanan khusus, dll.',
+              'Create an item not in the menu, e.g. service fee, special order, etc.',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nama item')),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Item name')),
             const SizedBox(height: 8),
-            TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
+            TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (Rp)')),
             const SizedBox(height: 8),
-            TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Jumlah')),
+            TextField(controller: qtyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity')),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Tambah'),
+            child: const Text('Add'),
           ),
         ],
       ),
@@ -309,7 +308,7 @@ class _CashierScreenState extends State<CashierScreen> {
       final qty = int.tryParse(qtyCtrl.text) ?? 1;
       if (name.isEmpty || price <= 0 || qty <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Isi nama, harga, dan jumlah yang valid dulu')),
+          const SnackBar(content: Text('Please enter a valid name, price, and quantity')),
         );
         return;
       }
@@ -342,7 +341,7 @@ class _CashierScreenState extends State<CashierScreen> {
           title: const Text('Cancel Item?', style: TextStyle(color: _navy)),
           content: Text('Yakin mau cancel "${line.product.name}"?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () => Navigator.pop(ctx, true),
@@ -359,11 +358,11 @@ class _CashierScreenState extends State<CashierScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Cancel', style: TextStyle(color: _navy)),
+        title: const Text('Confirm Cancel', style: TextStyle(color: _navy)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Masukkan PIN buat cancel "${line.product.name}"'),
+            Text('Enter PIN to cancel "${line.product.name}"'),
             const SizedBox(height: 8),
             TextField(
               controller: pinCtrl,
@@ -375,14 +374,14 @@ class _CashierScreenState extends State<CashierScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               if (pinCtrl.text == DbService.managerPin) {
                 Navigator.pop(ctx, true);
               } else {
-                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('PIN salah')));
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
               }
             },
             child: const Text('Cancel Item'),
@@ -436,7 +435,7 @@ class _CashierScreenState extends State<CashierScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                         Column(
                           children: [
                             Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
@@ -446,13 +445,13 @@ class _CashierScreenState extends State<CashierScreen> {
                         FilledButton(
                           style: FilledButton.styleFrom(backgroundColor: _navy),
                           onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Simpan'),
+                          child: const Text('Save'),
                         ),
                       ],
                     ),
                     const Divider(height: 24),
                     if (availableVariations.isNotEmpty) ...[
-                      const Text('VARIAN | PILIH SATU', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const Text('VARIATION | CHOOSE ONE', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Row(
                         children: availableVariations.map((v) {
@@ -476,7 +475,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       const SizedBox(height: 16),
                     ],
                     if (availableAddons.isNotEmpty) ...[
-                      const Text('TAMBAHAN | BOLEH LEBIH DARI SATU', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const Text('ADD-ONS | CHOOSE MULTIPLE', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -503,7 +502,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    const Text('JUMLAH', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    const Text('QUANTITY', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -525,7 +524,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         activeThumbColor: _navy,
-                        title: const Text('Diskon member 10%', style: TextStyle(fontSize: 13, color: _navy)),
+                        title: const Text('Member discount 10%', style: TextStyle(fontSize: 13, color: _navy)),
                         value: memberDiscount,
                         onChanged: (v) => setDialogState(() => memberDiscount = v),
                       ),
@@ -591,12 +590,12 @@ class _CashierScreenState extends State<CashierScreen> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Pelanggan', style: TextStyle(color: _navy)),
+        title: const Text('Customer', style: TextStyle(color: _navy)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('CARI MEMBER (NO. HP)', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+            const Text('FIND MEMBER (PHONE NO.)', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -614,7 +613,7 @@ class _CashierScreenState extends State<CashierScreen> {
                     final m = DbService.findMemberByPhone(phoneController.text.trim());
                     if (m == null) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Member tidak ditemukan. Daftarkan dulu di tab Member.')),
+                        const SnackBar(content: Text('Member not found. Register them first in the Member tab.')),
                       );
                       return;
                     }
@@ -624,19 +623,19 @@ class _CashierScreenState extends State<CashierScreen> {
                     });
                     Navigator.pop(ctx);
                   },
-                  child: const Text('Cari'),
+                  child: const Text('Search'),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            const Text('ATAU NAMA TAMU (NON-MEMBER)', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+            const Text('OR GUEST NAME (NON-MEMBER)', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: guestController,
-                    decoration: const InputDecoration(hintText: 'Nama pelanggan', isDense: true),
+                    decoration: const InputDecoration(hintText: 'Customer name', isDense: true),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -657,7 +656,7 @@ class _CashierScreenState extends State<CashierScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
     );
@@ -670,7 +669,7 @@ class _CashierScreenState extends State<CashierScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
-            title: const Text('Pilih Jenis Penjualan', style: TextStyle(color: _navy)),
+            title: const Text('Select Sales Type', style: TextStyle(color: _navy)),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -718,8 +717,8 @@ class _CashierScreenState extends State<CashierScreen> {
                         child: TextField(
                           controller: customCtrl,
                           decoration: const InputDecoration(
-                            labelText: 'Platform lain',
-                            hintText: 'Isi manual',
+                            labelText: 'Other platform',
+                            hintText: 'Enter manually',
                             isDense: true,
                           ),
                         ),
@@ -754,15 +753,15 @@ class _CashierScreenState extends State<CashierScreen> {
         title: const Text('Save Bill', style: TextStyle(color: _navy)),
         content: TextField(
           controller: noteCtrl,
-          decoration: const InputDecoration(labelText: 'Nama/Nomor Meja (opsional)', hintText: 'mis. Meja 5'),
+          decoration: const InputDecoration(labelText: 'Table Name/Number (optional)', hintText: 'e.g. Table 5'),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Simpan'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -800,7 +799,7 @@ class _CashierScreenState extends State<CashierScreen> {
       _chosenPromoId = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Bill${bill.note != null ? ' (${bill.note})' : ''} tersimpan.')),
+      SnackBar(content: Text('Bill${bill.note != null ? ' (${bill.note})' : ''} saved.')),
     );
   }
 
@@ -808,7 +807,7 @@ class _CashierScreenState extends State<CashierScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Bill Tersimpan', style: TextStyle(color: _navy)),
+        title: const Text('Saved Bills', style: TextStyle(color: _navy)),
         content: SizedBox(
           width: 360,
           child: ValueListenableBuilder(
@@ -818,7 +817,7 @@ class _CashierScreenState extends State<CashierScreen> {
               if (bills.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text('Belum ada bill tersimpan.', style: TextStyle(color: Colors.grey)),
+                  child: Text('No saved bills yet.', style: TextStyle(color: Colors.grey)),
                 );
               }
               return SizedBox(
@@ -843,7 +842,7 @@ class _CashierScreenState extends State<CashierScreen> {
                               Navigator.pop(ctx);
                               _loadHeldBill(bill);
                             },
-                            child: const Text('Buka'),
+                            child: const Text('Open'),
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
@@ -851,11 +850,11 @@ class _CashierScreenState extends State<CashierScreen> {
                               final confirm = await showDialog<bool>(
                                 context: ctx,
                                 builder: (c2) => AlertDialog(
-                                  title: const Text('Hapus Bill Ini?'),
-                                  content: const Text('Bill yang dihapus gak bisa dibalikin lagi.'),
+                                  title: const Text('Delete This Bill?'),
+                                  content: const Text('Deleted bills cannot be recovered.'),
                                   actions: [
-                                    TextButton(onPressed: () => Navigator.pop(c2, false), child: const Text('Batal')),
-                                    TextButton(onPressed: () => Navigator.pop(c2, true), child: const Text('Hapus', style: TextStyle(color: Colors.red))),
+                                    TextButton(onPressed: () => Navigator.pop(c2, false), child: const Text('Cancel')),
+                                    TextButton(onPressed: () => Navigator.pop(c2, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
                                   ],
                                 ),
                               );
@@ -872,7 +871,7 @@ class _CashierScreenState extends State<CashierScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
         ],
       ),
     );
@@ -883,14 +882,14 @@ class _CashierScreenState extends State<CashierScreen> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Keranjang Belum Kosong'),
-          content: const Text('Buka bill ini bakal timpa keranjang yang lagi diisi sekarang. Lanjut?'),
+          title: const Text('Cart Not Empty'),
+          content: const Text('Opening this bill will replace your current cart. Continue?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: _navy),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Lanjut'),
+              child: const Text('Continue'),
             ),
           ],
         ),
@@ -937,11 +936,11 @@ class _CashierScreenState extends State<CashierScreen> {
     if (!mounted) return;
     if (skippedItems.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Produk gak ketemu (mungkin udah dihapus): ${skippedItems.join(", ")}')),
+        SnackBar(content: Text('Product not found (may have been deleted): ${skippedItems.join(", ")}')),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bill${bill.note != null ? ' (${bill.note})' : ''} dibuka.')),
+        SnackBar(content: Text('Bill${bill.note != null ? ' (${bill.note})' : ''} opened.')),
       );
     }
   }
@@ -963,7 +962,7 @@ class _CashierScreenState extends State<CashierScreen> {
       total: totals['grandTotal']!,
       createdAt: DateTime.now(),
       memberId: _selectedMember?.id,
-      paymentMethod: 'belum dibayar',
+      paymentMethod: 'unpaid',
       salesType: _salesType,
       taxAmount: totals['tax']!,
       serviceAmount: totals['service']!,
@@ -989,7 +988,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup'),
+                    child: const Text('Close'),
                   ),
                 ],
               ),
@@ -1016,7 +1015,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   Center(
                     child: Column(
                       children: [
-                        const Text('ORDER DAPUR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _navy, letterSpacing: 1)),
+                        const Text('KITCHEN ORDER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _navy, letterSpacing: 1)),
                         Text(DbService.businessName, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
@@ -1025,9 +1024,9 @@ class _CashierScreenState extends State<CashierScreen> {
                   Text(DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now()), style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   Text(_salesType, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navy)),
                   if (_selectedMember != null)
-                    Text('Pelanggan: ${_selectedMember!.name}', style: const TextStyle(fontSize: 12, color: Colors.grey))
+                    Text('Customer: ${_selectedMember!.name}', style: const TextStyle(fontSize: 12, color: Colors.grey))
                   else if (_guestName != null)
-                    Text('Pelanggan: $_guestName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text('Customer: $_guestName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 12),
                   ..._cart.map((l) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1049,12 +1048,12 @@ class _CashierScreenState extends State<CashierScreen> {
                         ),
                       )),
                   const Divider(height: 20),
-                  const Center(child: Text('— Untuk Dapur, bukan struk pelanggan —', style: TextStyle(fontSize: 10, color: Colors.grey))),
+                  const Center(child: Text('— For Kitchen, not a customer receipt —', style: TextStyle(fontSize: 10, color: Colors.grey))),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup'),
+                    child: const Text('Close'),
                   ),
                 ],
               ),
@@ -1129,7 +1128,7 @@ class _CashierScreenState extends State<CashierScreen> {
                 children: [
                   const Icon(Icons.check_circle, color: Colors.green, size: 56),
                   const SizedBox(height: 8),
-                  const Center(child: Text('Pembayaran Berhasil!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: _navy))),
+                  const Center(child: Text('Payment Successful!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: _navy))),
                   const SizedBox(height: 4),
                   Center(child: Text(currency.format(tx.total), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _navy))),
                   const SizedBox(height: 20),
@@ -1137,10 +1136,10 @@ class _CashierScreenState extends State<CashierScreen> {
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () => _showReceiptDialog(tx),
                     icon: const Icon(Icons.receipt_long, size: 18),
-                    label: const Text('Cetak / Lihat Struk'),
+                    label: const Text('Print / View Receipt'),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Kirim struk via Email', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navy)),
+                  const Text('Send receipt via Email', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navy)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -1148,7 +1147,7 @@ class _CashierScreenState extends State<CashierScreen> {
                         child: TextField(
                           controller: emailCtrl,
                           keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(hintText: 'email@contoh.com', isDense: true),
+                          decoration: const InputDecoration(hintText: 'email@example.com', isDense: true),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1157,15 +1156,15 @@ class _CashierScreenState extends State<CashierScreen> {
                         onPressed: () {
                           if (emailCtrl.text.trim().isEmpty) return;
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Struk akan dikirim ke ${emailCtrl.text.trim()} (perlu sambungkan layanan email di backend)')),
+                            SnackBar(content: Text('Receipt will be sent to ${emailCtrl.text.trim()} (needs an email service connected on the backend)')),
                           );
                         },
-                        child: const Text('Kirim'),
+                        child: const Text('Send'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Kirim struk via SMS/WhatsApp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navy)),
+                  const Text('Send receipt via SMS/WhatsApp', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navy)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -1182,10 +1181,10 @@ class _CashierScreenState extends State<CashierScreen> {
                         onPressed: () {
                           if (phoneCtrl.text.trim().isEmpty) return;
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Struk akan dikirim ke ${phoneCtrl.text.trim()} (perlu sambungkan layanan SMS/WA di backend)')),
+                            SnackBar(content: Text('Receipt will be sent to ${phoneCtrl.text.trim()} (needs an SMS/WhatsApp service connected on the backend)')),
                           );
                         },
-                        child: const Text('Kirim'),
+                        child: const Text('Send'),
                       ),
                     ],
                   ),
@@ -1193,7 +1192,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   FilledButton(
                     style: FilledButton.styleFrom(backgroundColor: _navy),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Selesai'),
+                    child: const Text('Done'),
                   ),
                 ],
               ),
@@ -1221,7 +1220,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Tutup'),
+                    child: const Text('Close'),
                   ),
                 ],
               ),
@@ -1243,21 +1242,21 @@ class _CashierScreenState extends State<CashierScreen> {
             Text('Total: ${_currency.format(total)}', style: const TextStyle(color: _navy, fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 12),
             const Text(
-              'Minta pelanggan scan QRIS yang ada di meja kasir, lalu konfirmasi setelah dana masuk.',
+              'Ask the customer to scan the QRIS at the counter, then confirm once payment is received.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _navy),
             onPressed: () {
               Navigator.pop(ctx);
               _checkout('qris_manual');
             },
-            child: const Text('Sudah Dibayar'),
+            child: const Text('Payment Received'),
           ),
         ],
       ),
@@ -1320,8 +1319,8 @@ class _CashierScreenState extends State<CashierScreen> {
                       controller: _customCashController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'Nominal lain',
-                        hintText: 'Masukkan jumlah cash',
+                        labelText: 'Other amount',
+                        hintText: 'Enter cash amount',
                         isDense: true,
                       ),
                     ),
@@ -1333,7 +1332,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       final amount = int.tryParse(_customCashController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
                       if (amount < total) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(content: Text('Nominal kurang dari total tagihan')),
+                          const SnackBar(content: Text('Amount is less than the total due')),
                         );
                         return;
                       }
@@ -1346,12 +1345,12 @@ class _CashierScreenState extends State<CashierScreen> {
                         );
                       }
                     },
-                    child: const Text('Bayar'),
+                    child: const Text('Pay'),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              const Text('QRIS (Manual, tanpa Midtrans)', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+              const Text('QRIS (Manual, without Midtrans)', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
@@ -1360,7 +1359,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   _openManualQrisDialog(total);
                 },
                 icon: const Icon(Icons.qr_code, size: 18),
-                label: const Text('Tampilkan Kode QRIS'),
+                label: const Text('Show QRIS Code'),
               ),
               const SizedBox(height: 20),
               const Text('E-Wallet / QRIS (Midtrans)', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
@@ -1380,7 +1379,7 @@ class _CashierScreenState extends State<CashierScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 20),
-              const Text('EDC / Kartu', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+              const Text('EDC / Card', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -1522,7 +1521,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       IconButton(
                         onPressed: _openHeldBillsList,
                         icon: const Icon(Icons.receipt_long_outlined, color: _navy),
-                        tooltip: 'Bill Tersimpan',
+                        tooltip: 'Saved Bills',
                       ),
                       if (count > 0)
                         Positioned(
@@ -1547,7 +1546,7 @@ class _CashierScreenState extends State<CashierScreen> {
               child: IconButton(
                 onPressed: _addCustomItem,
                 icon: const Icon(Icons.add_shopping_cart, color: _navy),
-                tooltip: AppStrings.t('item_custom'),
+                tooltip: 'Custom Item',
               ),
             ),
           ),
@@ -1572,7 +1571,7 @@ class _CashierScreenState extends State<CashierScreen> {
                         Icon(Icons.point_of_sale, size: 16, color: openShift != null ? Colors.green.shade800 : _navy),
                         const SizedBox(width: 6),
                         Text(
-                          openShift != null ? 'Shift Aktif' : 'Mulai Shift',
+                          openShift != null ? 'Shift Active' : 'Start Shift',
                           style: TextStyle(fontSize: 12, color: openShift != null ? Colors.green.shade800 : _navy, fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -1601,7 +1600,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       const Icon(Icons.person, size: 16, color: _navy),
                       const SizedBox(width: 6),
                       Text(
-                        DbService.currentCashierName.isEmpty ? 'Set Kasir' : DbService.currentCashierName,
+                        DbService.currentCashierName.isEmpty ? 'Set Cashier' : DbService.currentCashierName,
                         style: const TextStyle(fontSize: 12, color: _navy, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -1642,7 +1641,7 @@ class _CashierScreenState extends State<CashierScreen> {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              pages[i] ?? 'Semua',
+                              pages[i] ?? 'All',
                               style: TextStyle(color: selected ? Colors.white : _navy, fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                           ),
@@ -1709,7 +1708,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       child: Text(
                         _selectedMember != null
                             ? '${_selectedMember!.name} • ${_selectedMember!.points} poin'
-                            : (_guestName != null ? _guestName! : AppStrings.t('tambah_pelanggan')),
+                            : (_guestName != null ? _guestName! : '+ Add Customer'),
                         style: const TextStyle(fontWeight: FontWeight.bold, color: _navy),
                       ),
                     ),
@@ -1731,7 +1730,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   const Divider(height: 1),
                   Expanded(
                     child: _cart.isEmpty
-                        ? const Center(child: Text('Belum ada item', style: TextStyle(color: Colors.grey)))
+                        ? const Center(child: Text('No items yet', style: TextStyle(color: Colors.grey)))
                         : ListView.builder(
                             itemCount: _cart.length,
                             itemBuilder: (ctx, i) {
@@ -1760,7 +1759,7 @@ class _CashierScreenState extends State<CashierScreen> {
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
-                                      tooltip: 'Cancel item (perlu PIN)',
+                                      tooltip: 'Cancel item (PIN required)',
                                       onPressed: () => _confirmRemoveLine(l),
                                     ),
                                   ],
@@ -1776,8 +1775,8 @@ class _CashierScreenState extends State<CashierScreen> {
                       child: TextField(
                         controller: _manualQueueCodeController,
                         decoration: const InputDecoration(
-                          labelText: 'Kode antrian (opsional)',
-                          hintText: 'Kosongkan buat otomatis, atau isi manual',
+                          labelText: 'Queue code (optional)',
+                          hintText: 'Leave blank for automatic, or enter manually',
                           isDense: true,
                         ),
                       ),
@@ -1810,7 +1809,7 @@ class _CashierScreenState extends State<CashierScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             color: _grey,
                             alignment: Alignment.center,
-                            child: Text(AppStrings.t('save_bill'), style: const TextStyle(color: _navy, fontSize: 12)),
+                            child: Text('Save Bill', style: const TextStyle(color: _navy, fontSize: 12)),
                           ),
                         ),
                       ),
@@ -1821,7 +1820,7 @@ class _CashierScreenState extends State<CashierScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             color: const Color(0xFFE0E0E0),
                             alignment: Alignment.center,
-                            child: Text(AppStrings.t('order_dapur'), style: const TextStyle(color: _navy, fontSize: 12)),
+                            child: Text('Kitchen Order', style: const TextStyle(color: _navy, fontSize: 12)),
                           ),
                         ),
                       ),
@@ -1833,7 +1832,7 @@ class _CashierScreenState extends State<CashierScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               color: _grey,
                               alignment: Alignment.center,
-                              child: Text(AppStrings.t('print_check'), style: const TextStyle(color: _navy, fontSize: 12)),
+                              child: Text('Print Check', style: const TextStyle(color: _navy, fontSize: 12)),
                             ),
                           ),
                         ),
@@ -1847,7 +1846,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       color: _cart.isEmpty ? Colors.grey : _navy,
                       alignment: Alignment.center,
                       child: Text(
-                        '${AppStrings.t('charge')} ${_currency.format(_grandTotal)}',
+                        '${'Charge'} ${_currency.format(_grandTotal)}',
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
@@ -1885,7 +1884,7 @@ class _CashierScreenState extends State<CashierScreen> {
               child: Text(
                 applied
                     ? 'Promo: ${resolved.label}${resolved.promo!.scope == 'item' ? ' (centang per produk saat ditambah)' : ''}'
-                    : (pending ? '${valid.length} promo tersedia — pilih salah satu' : 'Tanpa promo'),
+                    : (pending ? '${valid.length} promos available — pick one' : 'No promo'),
                 style: const TextStyle(fontSize: 12, color: _navy, fontWeight: FontWeight.bold),
               ),
             ),

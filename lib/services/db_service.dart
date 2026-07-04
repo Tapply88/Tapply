@@ -221,6 +221,14 @@ class DbService {
       'stock': p.stock,
       'sortOrder': p.sortOrder,
       'isActive': p.isActive,
+      'sku': p.sku,
+      'volume': p.volume,
+      'labelSize': p.labelSize,
+      'showPriceOnLabel': p.showPriceOnLabel,
+      'labelVariant': p.labelVariant,
+      'labelAddons': p.labelAddons,
+      'expiryDate': p.expiryDate?.toIso8601String(),
+      'productionDate': p.productionDate?.toIso8601String(),
     };
     try {
       final response = await http
@@ -367,8 +375,8 @@ class DbService {
   static Future<void> setLanguage(String lang) async => settings.put('language', lang);
 
   // ---- Sinkronisasi ke dashboard web (satu arah: app -> cloud) ----
-  static bool get syncEnabled => settings.get('syncEnabled', defaultValue: false);
-  static Future<void> setSyncEnabled(bool v) async => settings.put('syncEnabled', v);
+  static bool get syncEnabled => syncServerUrl.isNotEmpty && syncApiKey.isNotEmpty;
+  static bool get isPaired => syncEnabled;
   static String get syncServerUrl => settings.get('syncServerUrl', defaultValue: '');
   static Future<void> setSyncServerUrl(String url) async => settings.put('syncServerUrl', url);
   static String get syncApiKey => settings.get('syncApiKey', defaultValue: '');
@@ -753,6 +761,15 @@ class DbService {
           existing.stock = raw['stock'];
           existing.sortOrder = raw['sortOrder'] ?? existing.sortOrder;
           existing.isActive = raw['isActive'] ?? true;
+          existing.sku = raw['sku'] ?? existing.sku;
+          existing.volume = raw['volume'] ?? existing.volume;
+          existing.labelSize = raw['labelSize'] ?? existing.labelSize;
+          existing.showPriceOnLabel = raw['showPriceOnLabel'] ?? existing.showPriceOnLabel;
+          existing.labelVariant = raw['labelVariant'] ?? existing.labelVariant;
+          existing.labelAddons = (raw['labelAddons'] as List?)?.map((e) => e.toString()).toList() ?? existing.labelAddons;
+          existing.expiryDate = raw['expiryDate'] != null ? DateTime.tryParse(raw['expiryDate']) : existing.expiryDate;
+          existing.productionDate = raw['productionDate'] != null ? DateTime.tryParse(raw['productionDate']) : existing.productionDate;
+          if (raw['imageBase64'] != null) existing.imageBase64 = raw['imageBase64'];
           await existing.save();
         } else {
           await products.put(
@@ -765,6 +782,15 @@ class DbService {
               stock: raw['stock'] ?? 0,
               sortOrder: raw['sortOrder'] ?? 0,
               isActive: raw['isActive'] ?? true,
+              sku: raw['sku'] ?? '',
+              volume: raw['volume'],
+              labelSize: raw['labelSize'] ?? '60x40mm',
+              showPriceOnLabel: raw['showPriceOnLabel'] ?? true,
+              labelVariant: raw['labelVariant'],
+              labelAddons: (raw['labelAddons'] as List?)?.map((e) => e.toString()).toList(),
+              expiryDate: raw['expiryDate'] != null ? DateTime.tryParse(raw['expiryDate']) : null,
+              productionDate: raw['productionDate'] != null ? DateTime.tryParse(raw['productionDate']) : null,
+              imageBase64: raw['imageBase64'],
             ),
           );
         }
@@ -812,6 +838,58 @@ class DbService {
         );
         await promos.put(id, promo);
         promoCount++;
+      }
+
+      // Pengaturan bisnis (tax/service/dst) sekarang cuma bisa diedit dari
+      // dashboard — app nurut aja ke apa yang ke-pull di sini.
+      for (final raw in (data['variations'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        final existing = variationsBox.get(id);
+        if (existing != null) {
+          existing.name = raw['name'];
+          existing.sortOrder = raw['sortOrder'] ?? existing.sortOrder;
+          await existing.save();
+        } else {
+          await variationsBox.put(id, Variation(id: id, name: raw['name'], sortOrder: raw['sortOrder'] ?? 0));
+        }
+      }
+
+      for (final raw in (data['addons'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        final existing = addonsBox.get(id);
+        if (existing != null) {
+          existing.name = raw['name'];
+          existing.price = raw['price'] ?? existing.price;
+          existing.sortOrder = raw['sortOrder'] ?? existing.sortOrder;
+          await existing.save();
+        } else {
+          await addonsBox.put(id, Addon(id: id, name: raw['name'], price: raw['price'] ?? 0, sortOrder: raw['sortOrder'] ?? 0));
+        }
+      }
+
+      final business = data['business'] as Map<String, dynamic>?;
+      if (business != null) {
+        await updateBusinessProfile(
+          businessName: business['name'],
+          businessAddress: business['address'],
+          businessPhone: business['phone'],
+          receiptFooterText: business['footerText'],
+        );
+        await updateSettings(
+          taxEnabled: (business['taxPercent'] ?? 0) > 0,
+          taxPercent: (business['taxPercent'] as num?)?.toDouble(),
+          serviceEnabled: (business['servicePercent'] ?? 0) > 0,
+          servicePercent: (business['servicePercent'] as num?)?.toDouble(),
+          discountEnabled: (business['discountPercent'] ?? 0) > 0,
+          discountPercent: (business['discountPercent'] as num?)?.toDouble(),
+          roundingEnabled: business['roundingEnabled'],
+          roundingNearest: business['roundingNearest'],
+        );
+        if (business['managerPin'] != null) await setManagerPin(business['managerPin']);
+        if (business['pinRequiredForCancel'] != null) await setPinRequiredForCancel(business['pinRequiredForCancel']);
+        if (business['printCheckEnabled'] != null) await setPrintCheckEnabled(business['printCheckEnabled']);
+        if (business['queueNumberEnabled'] != null) await setQueueNumberEnabled(business['queueNumberEnabled']);
+        if (business['queueStartNumber'] != null) await setQueueStartNumber(business['queueStartNumber']);
       }
 
       return (

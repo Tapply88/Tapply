@@ -40,6 +40,18 @@ class Product extends HiveObject {
   @HiveField(11)
   DateTime? productionDate;
 
+  @HiveField(12)
+  String labelSize;
+
+  @HiveField(13)
+  bool showPriceOnLabel;
+
+  @HiveField(14)
+  String? labelVariant;
+
+  @HiveField(15)
+  List<String> labelAddons;
+
   Product({
     required this.id,
     required this.name,
@@ -53,5 +65,9 @@ class Product extends HiveObject {
     this.expiryDate,
     this.volume,
     this.productionDate,
-  });
+    this.labelSize = '60x40mm',
+    this.showPriceOnLabel = true,
+    this.labelVariant,
+    List<String>? labelAddons,
+  }) : labelAddons = labelAddons ?? [];
 }
