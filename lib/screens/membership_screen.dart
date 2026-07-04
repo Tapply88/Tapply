@@ -58,7 +58,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
         phone: phoneCtrl.text.trim(),
         joinedAt: DateTime.now(),
       );
-      await DbService.members.put(member.id, member);
+      await DbService.saveMember(member);
       setState(() {
         _found = member;
         _searched = true;

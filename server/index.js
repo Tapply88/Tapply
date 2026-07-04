@@ -123,5 +123,77 @@ app.post('/sync/transaction', async (req, res) => {
   }
 });
 
+// ---- Sinkronisasi member (upsert berdasarkan id lokal dari app) ----
+app.post('/sync/member', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const m = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('members').upsert({
+      id: m.id,
+      business_id: business.id,
+      name: m.name,
+      phone: m.phone,
+      points: m.points,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan member' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Sinkronisasi promo (upsert berdasarkan id lokal dari app) ----
+app.post('/sync/promo', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const p = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('promos').upsert({
+      id: p.id,
+      business_id: business.id,
+      name: p.name,
+      discount_type: p.discountType,
+      value: p.value,
+      scope: p.scope,
+      product_ids: p.productIds ?? [],
+      start_date: p.startDate ? p.startDate.substring(0, 10) : null,
+      end_date: p.endDate ? p.endDate.substring(0, 10) : null,
+      min_purchase: p.minPurchase,
+      active: p.active,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan promo' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Tapply backend jalan di port ${PORT}`));
