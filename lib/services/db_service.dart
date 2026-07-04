@@ -569,6 +569,111 @@ class DbService {
     }
   }
 
+  /// Tarik data terbaru dari dashboard web (Produk, Member, Promo) dan gabungin
+  /// ke penyimpanan lokal. Kalau ID-nya udah ada lokal, di-update (foto produk
+  /// lokal TETAP dipertahankan, gak ke-timpa null). Kalau belum ada, dibikin baru.
+  /// PENTING: belum ada resolusi konflik pintar — versi dari cloud yang menang
+  /// buat field yang di-sync (bukan foto).
+  static Future<({bool success, String message})> pullFromCloud() async {
+    if (syncServerUrl.isEmpty || syncApiKey.isEmpty) {
+      return (success: false, message: 'Isi URL Server & Kode API dulu.');
+    }
+    try {
+      final response = await http.get(
+        Uri.parse('$syncServerUrl/sync/pull'),
+        headers: {'x-api-key': syncApiKey},
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 401) {
+        return (success: false, message: 'Kode API gak valid.');
+      }
+      if (response.statusCode != 200) {
+        return (success: false, message: 'Gagal narik data (status ${response.statusCode}).');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+      int productCount = 0;
+      for (final raw in (data['products'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        final existing = products.get(id);
+        if (existing != null) {
+          existing.name = raw['name'];
+          existing.price = raw['price'];
+          existing.category = raw['category'];
+          existing.stock = raw['stock'];
+          existing.sortOrder = raw['sortOrder'] ?? existing.sortOrder;
+          existing.isActive = raw['isActive'] ?? true;
+          await existing.save();
+        } else {
+          await products.put(
+            id,
+            Product(
+              id: id,
+              name: raw['name'],
+              price: raw['price'],
+              category: raw['category'] ?? 'Umum',
+              stock: raw['stock'] ?? 0,
+              sortOrder: raw['sortOrder'] ?? 0,
+              isActive: raw['isActive'] ?? true,
+            ),
+          );
+        }
+        productCount++;
+      }
+
+      int memberCount = 0;
+      for (final raw in (data['members'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        final existing = members.get(id);
+        if (existing != null) {
+          existing.name = raw['name'];
+          existing.phone = raw['phone'];
+          existing.points = raw['points'] ?? existing.points;
+          await existing.save();
+        } else {
+          await members.put(
+            id,
+            Member(
+              id: id,
+              name: raw['name'],
+              phone: raw['phone'],
+              points: raw['points'] ?? 0,
+              joinedAt: DateTime.now(),
+            ),
+          );
+        }
+        memberCount++;
+      }
+
+      int promoCount = 0;
+      for (final raw in (data['promos'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        final promo = Promo(
+          id: id,
+          name: raw['name'],
+          discountType: raw['discountType'] ?? 'percentage',
+          value: (raw['value'] as num?)?.toDouble() ?? 0,
+          scope: raw['scope'] ?? 'cart',
+          productIds: (raw['productIds'] as List?)?.map((e) => e.toString()).toList() ?? [],
+          startDate: raw['startDate'] != null ? DateTime.tryParse(raw['startDate']) : null,
+          endDate: raw['endDate'] != null ? DateTime.tryParse(raw['endDate']) : null,
+          minPurchase: raw['minPurchase'] ?? 0,
+          active: raw['active'] ?? true,
+        );
+        await promos.put(id, promo);
+        promoCount++;
+      }
+
+      return (
+        success: true,
+        message: 'Berhasil: $productCount produk, $memberCount member, $promoCount promo.',
+      );
+    } catch (e) {
+      return (success: false, message: 'Gagal narik data — cek koneksi internet.');
+    }
+  }
+
   /// Rincian penjualan (per metode bayar) selama shift berjalan (dari startTime s/d sekarang atau endTime).
   static Map<String, int> salesDuringShift(Shift shift) {
     final to = shift.endTime ?? DateTime.now();

@@ -42,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _syncEnabled;
   late final TextEditingController _syncUrlCtrl;
   late final TextEditingController _syncKeyCtrl;
+  bool _pulling = false;
 
   @override
   void initState() {
@@ -477,6 +478,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengaturan sinkronisasi disimpan')));
             },
             child: const Text('Simpan Sinkronisasi'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+            onPressed: _pulling
+                ? null
+                : () async {
+                    setState(() => _pulling = true);
+                    final result = await DbService.pullFromCloud();
+                    setState(() => _pulling = false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.message)));
+                    }
+                  },
+            child: Text(_pulling ? 'Menarik data...' : 'Tarik Data dari Dashboard'),
+          ),
+          const Text(
+            'Ambil Produk/Member/Promo terbaru yang diedit dari dashboard web. Kalau ada '
+            'yang bentrok, versi dari dashboard yang dipakai (belum ada gabung otomatis pintar).',
+            style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),

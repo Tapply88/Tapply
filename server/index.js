@@ -270,5 +270,60 @@ app.post('/sync/shift', async (req, res) => {
   }
 });
 
+// ---- Tarik data dari cloud ke app (bagian dari sync dua arah) ----
+// App manggil ini pas cashier klik "Tarik Data dari Dashboard" di Setelan.
+app.get('/sync/pull', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const [{ data: products }, { data: members }, { data: promos }] = await Promise.all([
+      supabaseAdmin.from('products').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('members').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('promos').select('*').eq('business_id', business.id),
+    ]);
+
+    res.json({
+      products: (products || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        category: p.category,
+        stock: p.stock,
+        sortOrder: p.sort_order,
+        isActive: p.is_active,
+      })),
+      members: (members || []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        phone: m.phone,
+        points: m.points,
+      })),
+      promos: (promos || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        discountType: p.discount_type,
+        value: p.value,
+        scope: p.scope,
+        productIds: p.product_ids || [],
+        startDate: p.start_date,
+        endDate: p.end_date,
+        minPurchase: p.min_purchase,
+        active: p.active,
+      })),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Tapply backend jalan di port ${PORT}`));
