@@ -1,3 +1,4 @@
+cat > pubspec.yaml << 'PUBEOF'
 name: tapply
 description: Tapply - POS Kasir + Membership untuk bisnis F&B
 publish_to: 'none'
@@ -33,3 +34,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+PUBEOF
+
+echo 'Selesai. Sekarang jalankan:'
+echo 'flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter run -d web-server --web-port 8081 --release'

@@ -34,6 +34,12 @@ class Product extends HiveObject {
   @HiveField(9)
   DateTime? expiryDate;
 
+  @HiveField(10)
+  String? volume;
+
+  @HiveField(11)
+  DateTime? productionDate;
+
   Product({
     required this.id,
     required this.name,
@@ -45,5 +51,7 @@ class Product extends HiveObject {
     this.sortOrder = 0,
     this.sku = '',
     this.expiryDate,
+    this.volume,
+    this.productionDate,
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 import '../models/product.dart';
 import '../services/db_service.dart';
 
@@ -46,9 +47,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final nameCtrl = TextEditingController(text: p.name);
     final stockCtrl = TextEditingController(text: '${p.stock}');
     final skuCtrl = TextEditingController(text: p.sku);
+    final volumeCtrl = TextEditingController(text: p.volume ?? '');
     String category = p.category;
     String? imageBase64 = p.imageBase64;
     DateTime? expiryDate = p.expiryDate;
+    DateTime? productionDate = p.productionDate;
 
     await showDialog(
       context: context,
@@ -115,9 +118,57 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     decoration: const InputDecoration(labelText: 'Stok saat ini'),
                   ),
                   const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: skuCtrl,
+                          decoration: const InputDecoration(labelText: 'SKU', hintText: 'Kosongkan buat generate otomatis'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: TextButton(
+                          onPressed: () => setDialogState(() => skuCtrl.text = DbService.suggestSkuForName(nameCtrl.text)),
+                          child: const Text('Saran'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
-                    controller: skuCtrl,
-                    decoration: const InputDecoration(labelText: 'SKU', hintText: 'Kosongkan buat generate otomatis'),
+                    controller: volumeCtrl,
+                    decoration: const InputDecoration(labelText: 'Volume/Ukuran (opsional)', hintText: 'mis. 250ml, 500ml'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          productionDate == null ? 'Tanggal produksi: -' : 'Produksi: ${_dateFmt.format(productionDate!)}',
+                          style: const TextStyle(fontSize: 13, color: _navy),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: productionDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) setDialogState(() => productionDate = picked);
+                        },
+                        child: const Text('Pilih'),
+                      ),
+                      if (productionDate != null)
+                        TextButton(
+                          onPressed: () => setDialogState(() => productionDate = null),
+                          child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -161,6 +212,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   await DbService.setProductImage(p.id, imageBase64);
                   await DbService.setProductSku(p.id, skuCtrl.text);
                   await DbService.setProductExpiry(p.id, expiryDate);
+                  await DbService.setProductVolume(p.id, volumeCtrl.text.trim().isEmpty ? null : volumeCtrl.text.trim());
+                  await DbService.setProductProductionDate(p.id, productionDate);
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) setState(() {});
                 },
@@ -244,9 +297,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   const SizedBox(height: 8),
                   TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok awal')),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: skuCtrl,
-                    decoration: const InputDecoration(labelText: 'SKU', hintText: 'Kosongkan buat generate otomatis'),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: skuCtrl,
+                          decoration: const InputDecoration(labelText: 'SKU', hintText: 'Kosongkan buat generate otomatis'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: TextButton(
+                          onPressed: () => setDialogState(() => skuCtrl.text = DbService.suggestSkuForName(nameCtrl.text)),
+                          child: const Text('Saran'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -346,53 +414,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _printLabel(Product p) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 280),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(border: Border.all(color: _navy, width: 0.5), borderRadius: BorderRadius.circular(8)),
-                  child: Column(
-                    children: [
-                      Text(p.name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 14)),
-                      const SizedBox(height: 8),
-                      QrImageView(data: p.sku.isEmpty ? p.id : p.sku, size: 140, backgroundColor: Colors.white),
-                      const SizedBox(height: 8),
-                      Text(p.sku.isEmpty ? '-' : p.sku, style: const TextStyle(fontSize: 12, color: _navy, fontFamily: 'monospace')),
-                      const SizedBox(height: 4),
-                      Text(_currency.format(p.price), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navy)),
-                      if (p.expiryDate != null) ...[
-                        const SizedBox(height: 4),
-                        Text('EXP: ${_dateFmt.format(p.expiryDate!)}', style: const TextStyle(fontSize: 11, color: Colors.red)),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Preview stiker — sambungkan ke printer label buat cetak fisik.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Tutup'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => LabelGeneratorScreen(product: p)));
   }
 
   @override
@@ -500,6 +522,302 @@ class _InventoryScreenState extends State<InventoryScreen> {
         backgroundColor: _navy,
         onPressed: _addProduct,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+/// Halaman cetak label — QR code + barcode Code128, ukuran label bisa dipilih,
+/// bisa generate banyak sekaligus dengan nomor urut (buat batch/traceability
+/// per botol/unit, terpisah dari SKU produk).
+class LabelGeneratorScreen extends StatefulWidget {
+  final Product product;
+  const LabelGeneratorScreen({super.key, required this.product});
+
+  @override
+  State<LabelGeneratorScreen> createState() => _LabelGeneratorScreenState();
+}
+
+class _LabelGeneratorScreenState extends State<LabelGeneratorScreen> {
+  final _dateFmt = DateFormat('d MMM yy');
+  final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final _startCtrl = TextEditingController(text: '1');
+  final _qtyCtrl = TextEditingController(text: '10');
+  String _labelSize = '60x40mm';
+  List<int> _generatedNumbers = [];
+
+  String? _selectedVariation;
+  final Set<String> _selectedAddons = {};
+  bool _showPrice = true;
+  DateTime? _productionDate;
+  DateTime? _expiryDate;
+
+  static const _sizes = {
+    '60x40mm': Size(220, 160),
+    '50x30mm': Size(190, 130),
+    '40x30mm': Size(160, 130),
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _productionDate = widget.product.productionDate;
+    _expiryDate = widget.product.expiryDate;
+  }
+
+  int get _labelPrice {
+    int total = widget.product.price;
+    for (final addonName in _selectedAddons) {
+      final addon = DbService.addons.where((a) => a.name == addonName);
+      if (addon.isNotEmpty) total += addon.first.price;
+    }
+    return total;
+  }
+
+  void _generate() {
+    final start = int.tryParse(_startCtrl.text) ?? 1;
+    final qty = (int.tryParse(_qtyCtrl.text) ?? 1).clamp(1, 100);
+    setState(() => _generatedNumbers = List.generate(qty, (i) => start + i));
+  }
+
+  Future<void> _pickDate({required bool isProduction}) async {
+    final current = isProduction ? _productionDate : _expiryDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isProduction) {
+        _productionDate = picked;
+      } else {
+        _expiryDate = picked;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+    final cardSize = _sizes[_labelSize]!;
+    final variations = DbService.variations;
+    final addons = DbService.addons;
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Cetak Label — ${p.name}')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _labelSize,
+                          decoration: const InputDecoration(labelText: 'Ukuran Label'),
+                          items: _sizes.keys.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                          onChanged: (v) => setState(() => _labelSize = v ?? _labelSize),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _startCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Nomor Awal'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _qtyCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Jumlah Label'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (variations.isNotEmpty)
+                    DropdownButtonFormField<String?>(
+                      initialValue: _selectedVariation,
+                      decoration: const InputDecoration(labelText: 'Varian (opsional)'),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Tanpa Varian')),
+                        ...variations.map((v) => DropdownMenuItem(value: v.name, child: Text(v.name))),
+                      ],
+                      onChanged: (v) => setState(() => _selectedVariation = v),
+                    ),
+                  if (addons.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text('Tambahan (opsional, boleh lebih dari satu)', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: addons.map((a) {
+                        final selected = _selectedAddons.contains(a.name);
+                        final priceLabel = a.price > 0 ? ' (+${_currency.format(a.price)})' : '';
+                        return FilterChip(
+                          label: Text('${a.name}$priceLabel', style: const TextStyle(fontSize: 12)),
+                          selected: selected,
+                          selectedColor: _navy.withValues(alpha: 0.15),
+                          onSelected: (v) => setState(() {
+                            if (v) {
+                              _selectedAddons.add(a.name);
+                            } else {
+                              _selectedAddons.remove(a.name);
+                            }
+                          }),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                          onPressed: () => _pickDate(isProduction: true),
+                          child: Text(_productionDate == null ? 'Tanggal Produksi' : 'Prod: ${_dateFmt.format(_productionDate!)}', style: const TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                          onPressed: () => _pickDate(isProduction: false),
+                          child: Text(_expiryDate == null ? 'Tanggal Kedaluwarsa' : 'Exp: ${_dateFmt.format(_expiryDate!)}', style: const TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Text(
+                    'Tanggal ini khusus buat batch label kali ini, gak ngubah data produk yang tersimpan.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: _navy,
+                    title: const Text('Tampilkan Harga di Label'),
+                    subtitle: _showPrice ? Text('${_currency.format(_labelPrice)} (harga dasar + tambahan terpilih)', style: const TextStyle(fontSize: 11)) : null,
+                    value: _showPrice,
+                    onChanged: (v) => setState(() => _showPrice = v),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: _navy),
+                    onPressed: _generate,
+                    child: const Text('⚡ Generate Label'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_generatedNumbers.isEmpty)
+              const Expanded(
+                child: Center(child: Text('Atur pengaturan di atas, terus tap Generate.', style: TextStyle(color: Colors.grey))),
+              )
+            else
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${_generatedNumbers.length} label dibuat', style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: _generatedNumbers.map((num) => _buildLabelCard(p, num, cardSize)).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Preview — pas print fisik: paper size $_labelSize, margin None, scale 100%.',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabelCard(Product p, int barcodeNum, Size size) {
+    final qrData = 'TAPPLY|${p.sku}|$barcodeNum|${_productionDate?.toIso8601String() ?? ""}';
+    final variantLine = [
+      if (_selectedVariation != null) _selectedVariation!,
+      ..._selectedAddons,
+    ].join(', ');
+
+    return Container(
+      width: size.width,
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(6)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        if (p.volume != null && p.volume!.isNotEmpty) p.volume!,
+                        if (p.sku.isNotEmpty) p.sku,
+                      ].join(' · '),
+                      style: const TextStyle(fontSize: 9, color: Colors.grey),
+                    ),
+                    if (variantLine.isNotEmpty)
+                      Text(variantLine, style: const TextStyle(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w600)),
+                    if (_productionDate != null)
+                      Text('Prod: ${_dateFmt.format(_productionDate!)}', style: const TextStyle(fontSize: 8.5, color: Colors.black54)),
+                    if (_expiryDate != null)
+                      Text('Exp: ${_dateFmt.format(_expiryDate!)}', style: const TextStyle(fontSize: 8.5, color: Colors.black54)),
+                    if (_showPrice)
+                      Text(_currency.format(_labelPrice), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              QrImageView(data: qrData, size: 48, backgroundColor: Colors.white),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 40,
+            child: BarcodeWidget(
+              barcode: Barcode.code128(),
+              data: '$barcodeNum',
+              drawText: true,
+              style: const TextStyle(fontSize: 9, fontFamily: 'monospace'),
+            ),
+          ),
+        ],
       ),
     );
   }
