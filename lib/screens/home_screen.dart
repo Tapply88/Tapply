@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'cashier_screen.dart';
 import 'membership_screen.dart';
 import 'report_screen.dart';
@@ -77,42 +78,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (DbService.currentOpenShift == null) {
-      return Scaffold(
-        backgroundColor: _grey,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/logo.png', height: 160),
-                const SizedBox(height: 32),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: _navy, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),
-                  onPressed: _openStartShiftForm,
-                  child: Text(AppStrings.t('mulai_shift'), style: const TextStyle(fontSize: 16)),
+    return ValueListenableBuilder(
+      valueListenable: DbService.shifts.listenable(),
+      builder: (context, box, _) {
+        if (DbService.currentOpenShift == null) {
+          return Scaffold(
+            backgroundColor: _grey,
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/logo.png', height: 160),
+                    const SizedBox(height: 32),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: _navy, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),
+                      onPressed: _openStartShiftForm,
+                      child: Text(AppStrings.t('mulai_shift'), style: const TextStyle(fontSize: 16)),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      );
-    }
+          );
+        }
 
-    return Scaffold(
-      body: _screens[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.point_of_sale), label: AppStrings.t('nav_kasir')),
-          NavigationDestination(icon: const Icon(Icons.card_membership), label: AppStrings.t('nav_member')),
-          NavigationDestination(icon: const Icon(Icons.inventory_2), label: AppStrings.t('nav_inventory')),
-          NavigationDestination(icon: const Icon(Icons.bar_chart), label: AppStrings.t('nav_laporan')),
-          NavigationDestination(icon: const Icon(Icons.settings), label: AppStrings.t('nav_setelan')),
-        ],
-      ),
+        return Scaffold(
+          body: _screens[_index],
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            destinations: [
+              NavigationDestination(icon: const Icon(Icons.point_of_sale), label: AppStrings.t('nav_kasir')),
+              NavigationDestination(icon: const Icon(Icons.card_membership), label: AppStrings.t('nav_member')),
+              NavigationDestination(icon: const Icon(Icons.inventory_2), label: AppStrings.t('nav_inventory')),
+              NavigationDestination(icon: const Icon(Icons.bar_chart), label: AppStrings.t('nav_laporan')),
+              NavigationDestination(icon: const Icon(Icons.settings), label: AppStrings.t('nav_setelan')),
+            ],
+          ),
+        );
+      },
     );
   }
 }

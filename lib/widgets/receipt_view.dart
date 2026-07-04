@@ -106,6 +106,11 @@ class ReceiptView extends StatelessWidget {
         if (customerName != null)
           Text('Pelanggan: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Text('Bayar: ${paymentMethodLabel(tx.paymentMethod)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (tx.paymentMethod == 'cash' && tx.cashReceived != null) ...[
+          Text('Tunai: ${currency.format(tx.cashReceived)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          if (tx.changeAmount != null && tx.changeAmount! > 0)
+            Text('Kembalian: ${currency.format(tx.changeAmount)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
         if (tx.cashierName != null && tx.cashierName!.isNotEmpty)
           Text('Dilayani oleh: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 8),

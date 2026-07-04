@@ -43,6 +43,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _syncUrlCtrl;
   late final TextEditingController _syncKeyCtrl;
   bool _pulling = false;
+  bool _retrying = false;
+  late bool _pinRequired;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _phoneCtrl = TextEditingController(text: DbService.businessPhone);
     _footerCtrl = TextEditingController(text: DbService.receiptFooterText);
     _pinCtrl = TextEditingController(text: DbService.managerPin);
+    _pinRequired = DbService.pinRequiredForCancel;
     _language = DbService.language;
     _logoBase64 = DbService.businessLogoBase64;
 
@@ -383,20 +386,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _pinCtrl,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: AppStrings.t('pin_manager')),
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _navy),
-            onPressed: () async {
-              await DbService.setManagerPin(_pinCtrl.text.trim().isEmpty ? '1234' : _pinCtrl.text.trim());
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PIN disimpan')));
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: _navy,
+            title: const Text('Wajib PIN buat Cancel Item'),
+            subtitle: const Text('Kalau dimatikan, cancel item cukup konfirmasi biasa tanpa PIN', style: TextStyle(fontSize: 11)),
+            value: _pinRequired,
+            onChanged: (v) async {
+              setState(() => _pinRequired = v);
+              await DbService.setPinRequiredForCancel(v);
             },
-            child: const Text('Simpan PIN'),
           ),
+          if (_pinRequired) ...[
+            TextField(
+              controller: _pinCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: AppStrings.t('pin_manager')),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _navy),
+              onPressed: () async {
+                await DbService.setManagerPin(_pinCtrl.text.trim().isEmpty ? '1234' : _pinCtrl.text.trim());
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PIN disimpan')));
+              },
+              child: const Text('Simpan PIN'),
+            ),
+          ],
           const Divider(height: 40),
           Text(AppStrings.t('bahasa'), style: const TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
           const SizedBox(height: 4),
@@ -499,6 +515,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'yang bentrok, versi dari dashboard yang dipakai (belum ada gabung otomatis pintar).',
             style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
+          const SizedBox(height: 16),
+          if (DbService.pendingSyncCount > 0) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber)),
+              child: Text(
+                '${DbService.pendingSyncCount} data belum sempat ke-kirim ke cloud (kemungkinan pas offline). Bakal dicoba lagi otomatis pas ada koneksi, atau tap tombol di bawah buat coba sekarang.',
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+              onPressed: _retrying
+                  ? null
+                  : () async {
+                      setState(() => _retrying = true);
+                      final count = await DbService.retryPendingSyncs();
+                      setState(() => _retrying = false);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(_retrying ? 'Mencoba...' : 'Berhasil kirim ulang $count data. Sisa: ${DbService.pendingSyncCount}')),
+                        );
+                      }
+                    },
+              child: Text(_retrying ? 'Mencoba...' : 'Coba Sync Ulang Sekarang'),
+            ),
+          ],
         ],
       ),
     );
