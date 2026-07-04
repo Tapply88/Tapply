@@ -232,5 +232,43 @@ app.post('/sync/product', async (req, res) => {
   }
 });
 
+// ---- Sinkronisasi shift (upsert berdasarkan id lokal dari app) ----
+app.post('/sync/shift', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const s = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('shifts').upsert({
+      id: s.id,
+      business_id: business.id,
+      cashier_name: s.cashierName,
+      cashier_email: s.cashierEmail,
+      start_time: s.startTime,
+      starting_cash: s.startingCash,
+      end_time: s.endTime,
+      ending_cash_counted: s.endingCashCounted,
+      status: s.status,
+      note: s.note,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan shift' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Tapply backend jalan di port ${PORT}`));
