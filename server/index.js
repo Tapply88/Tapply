@@ -195,5 +195,42 @@ app.post('/sync/promo', async (req, res) => {
   }
 });
 
+// ---- Sinkronisasi produk (upsert berdasarkan id lokal dari app) ----
+// Foto produk sengaja gak dikirim di sini (base64 kebesaran) — cuma data teks.
+app.post('/sync/product', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const p = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('products').upsert({
+      id: p.id,
+      business_id: business.id,
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      stock: p.stock,
+      sort_order: p.sortOrder,
+      is_active: p.isActive,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan produk' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Tapply backend jalan di port ${PORT}`));
