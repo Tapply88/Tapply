@@ -1,3 +1,4 @@
+cat > lib/screens/report_screen.dart << 'REPEOF'
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -203,3 +204,6 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 }
+REPEOF
+
+echo 'Selesai. Jalankan: flutter clean && flutter pub get && flutter run -d web-server --web-port 8081 --release'
