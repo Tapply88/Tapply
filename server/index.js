@@ -294,12 +294,13 @@ app.get('/sync/pull', async (req, res) => {
     if (businessError || !businessFull) return res.status(401).json({ error: 'API key gak valid' });
     const business = businessFull;
 
-    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }] = await Promise.all([
+    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }, { data: staff }] = await Promise.all([
       supabaseAdmin.from('products').select('*').eq('business_id', business.id),
       supabaseAdmin.from('members').select('*').eq('business_id', business.id),
       supabaseAdmin.from('promos').select('*').eq('business_id', business.id),
       supabaseAdmin.from('variations').select('*').eq('business_id', business.id),
       supabaseAdmin.from('addons').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('staff').select('*').eq('business_id', business.id).eq('active', true),
     ]);
 
     res.json({
@@ -349,6 +350,12 @@ app.get('/sync/pull', async (req, res) => {
         name: a.name,
         price: a.price,
         sortOrder: a.sort_order,
+      })),
+      staff: (staff || []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        role: s.role,
+        pin: s.pin,
       })),
       business: {
         name: business.name,

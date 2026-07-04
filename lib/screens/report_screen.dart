@@ -14,7 +14,7 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  Future<bool> _confirmPin(BuildContext context, String title) async {
+  Future<bool> _confirmSupervisorPin(BuildContext context, String title) async {
     final pinCtrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -23,7 +23,7 @@ class _ReportScreenState extends State<ReportScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Enter the manager PIN to continue.'),
+            const Text('Enter a Supervisor PIN to continue.'),
             const SizedBox(height: 8),
             TextField(
               controller: pinCtrl,
@@ -39,10 +39,13 @@ class _ReportScreenState extends State<ReportScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              if (pinCtrl.text == DbService.managerPin) {
-                Navigator.pop(ctx, true);
-              } else {
+              final staff = DbService.findStaffByPin(pinCtrl.text);
+              if (staff == null) {
                 ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
+              } else if (staff.role != 'supervisor') {
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Only supervisors can void receipts')));
+              } else {
+                Navigator.pop(ctx, true);
               }
             },
             child: const Text('Confirm'),
@@ -75,7 +78,7 @@ class _ReportScreenState extends State<ReportScreen> {
                           icon: const Icon(Icons.block, size: 16),
                           label: const Text('Void Receipt'),
                           onPressed: () async {
-                            final confirmed = await _confirmPin(ctx, 'Void This Receipt?');
+                            final confirmed = await _confirmSupervisorPin(ctx, 'Void This Receipt?');
                             if (!confirmed) return;
                             await DbService.voidTransaction(tx.id);
                             setDialogState(() {});

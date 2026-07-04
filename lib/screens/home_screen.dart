@@ -7,6 +7,7 @@ import 'report_screen.dart';
 import 'inventory_screen.dart';
 import 'settings_screen.dart';
 import '../services/db_service.dart';
+import '../models/staff_member.dart';
 
 const _navy = Color(0xFF092762);
 const _grey = Color(0xFFCFCFCF);
@@ -97,47 +98,76 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openStartShiftForm() async {
-    final nameCtrl = TextEditingController(text: DbService.currentCashierName);
-    final emailCtrl = TextEditingController(text: DbService.currentCashierEmail);
+    final staffList = DbService.staffList;
     final cashCtrl = TextEditingController(text: '0');
+
+    if (staffList.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('No Staff Configured', style: TextStyle(color: _navy)),
+          content: const Text('Add at least one cashier or supervisor in the dashboard before starting a shift.'),
+          actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _navy),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    StaffMember? selectedStaff = staffList.first;
 
     final ok = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Start Shift', style: TextStyle(color: _navy)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Cashier Name')),
-              const SizedBox(height: 8),
-              TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Cashier Email'), keyboardType: TextInputType.emailAddress),
-              const SizedBox(height: 8),
-              TextField(
-                controller: cashCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Starting Cash'),
-              ),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Start Shift', style: TextStyle(color: _navy)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<StaffMember>(
+                  initialValue: selectedStaff,
+                  decoration: const InputDecoration(labelText: 'Cashier'),
+                  items: staffList
+                      .map((s) => DropdownMenuItem(
+                            value: s,
+                            child: Text('${s.name} (${s.role == 'supervisor' ? 'Supervisor' : 'Cashier'})'),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => selectedStaff = v),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: cashCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Starting Cash'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _navy),
+              onPressed: () {
+                if (selectedStaff == null) return;
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Start Shift'),
+            ),
+          ],
         ),
-        actions: [
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _navy),
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text('Start Shift'),
-          ),
-        ],
       ),
     );
 
-    if (ok == true) {
-      await DbService.setCurrentCashier(name: nameCtrl.text.trim(), email: emailCtrl.text.trim());
+    if (ok == true && selectedStaff != null) {
+      await DbService.setCurrentCashier(name: selectedStaff!.name, email: '');
       await DbService.startShift(startingCash: int.tryParse(cashCtrl.text) ?? 0);
       if (mounted) setState(() {});
     }
