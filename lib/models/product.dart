@@ -28,6 +28,12 @@ class Product extends HiveObject {
   @HiveField(7)
   int sortOrder;
 
+  @HiveField(8)
+  String sku;
+
+  @HiveField(9)
+  DateTime? expiryDate;
+
   Product({
     required this.id,
     required this.name,
@@ -37,5 +43,7 @@ class Product extends HiveObject {
     this.stock = 0,
     this.imageBase64,
     this.sortOrder = 0,
+    this.sku = '',
+    this.expiryDate,
   });
 }

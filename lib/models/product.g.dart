@@ -25,13 +25,15 @@ class ProductAdapter extends TypeAdapter<Product> {
       stock: fields[5] as int,
       imageBase64: fields[6] as String?,
       sortOrder: fields[7] as int,
+      sku: fields[8] as String,
+      expiryDate: fields[9] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +49,11 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(6)
       ..write(obj.imageBase64)
       ..writeByte(7)
-      ..write(obj.sortOrder);
+      ..write(obj.sortOrder)
+      ..writeByte(8)
+      ..write(obj.sku)
+      ..writeByte(9)
+      ..write(obj.expiryDate);
   }
 
   @override

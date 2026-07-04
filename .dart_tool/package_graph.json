@@ -16,6 +16,7 @@
         "image_picker",
         "intl",
         "provider",
+        "qr_flutter",
         "reorderable_grid_view",
         "uuid"
       ],
@@ -100,6 +101,14 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "qr_flutter",
+      "version": "4.1.0",
+      "dependencies": [
+        "flutter",
+        "qr"
       ]
     },
     {
@@ -612,6 +621,13 @@
         "stream_channel",
         "string_scanner",
         "term_glyph"
+      ]
+    },
+    {
+      "name": "qr",
+      "version": "3.0.2",
+      "dependencies": [
+        "meta"
       ]
     },
     {

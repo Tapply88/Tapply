@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../models/product.dart';
 import '../services/db_service.dart';
 
@@ -18,6 +19,7 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final _currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   final _searchCtrl = TextEditingController();
+  final _dateFmt = DateFormat('dd MMM yyyy');
   String _query = '';
 
   /// Dropdown kategori + opsi "Tambah kategori baru". Mengembalikan kategori terpilih.
@@ -43,8 +45,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Future<void> _editProduct(Product p) async {
     final nameCtrl = TextEditingController(text: p.name);
     final stockCtrl = TextEditingController(text: '${p.stock}');
+    final skuCtrl = TextEditingController(text: p.sku);
     String category = p.category;
     String? imageBase64 = p.imageBase64;
+    DateTime? expiryDate = p.expiryDate;
 
     await showDialog(
       context: context,
@@ -110,6 +114,39 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Stok saat ini'),
                   ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: skuCtrl,
+                    decoration: const InputDecoration(labelText: 'SKU', hintText: 'Kosongkan buat generate otomatis'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          expiryDate == null ? 'Tanggal kedaluwarsa: -' : 'Kedaluwarsa: ${_dateFmt.format(expiryDate!)}',
+                          style: const TextStyle(fontSize: 13, color: _navy),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: expiryDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) setDialogState(() => expiryDate = picked);
+                        },
+                        child: const Text('Pilih'),
+                      ),
+                      if (expiryDate != null)
+                        TextButton(
+                          onPressed: () => setDialogState(() => expiryDate = null),
+                          child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -122,6 +159,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   await DbService.setProductCategory(p.id, category);
                   await DbService.setStock(p.id, int.tryParse(stockCtrl.text) ?? p.stock);
                   await DbService.setProductImage(p.id, imageBase64);
+                  await DbService.setProductSku(p.id, skuCtrl.text);
+                  await DbService.setProductExpiry(p.id, expiryDate);
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) setState(() {});
                 },
@@ -138,8 +177,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
     final stockCtrl = TextEditingController(text: '0');
+    final skuCtrl = TextEditingController();
     String category = DbService.categories.isNotEmpty ? DbService.categories.first : 'Jamu';
     String? imageBase64;
+    DateTime? expiryDate;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -202,6 +243,34 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Harga (Rp)')),
                   const SizedBox(height: 8),
                   TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stok awal')),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: skuCtrl,
+                    decoration: const InputDecoration(labelText: 'SKU', hintText: 'Kosongkan buat generate otomatis'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          expiryDate == null ? 'Tanggal kedaluwarsa: -' : 'Kedaluwarsa: ${_dateFmt.format(expiryDate!)}',
+                          style: const TextStyle(fontSize: 13, color: _navy),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: expiryDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) setDialogState(() => expiryDate = picked);
+                        },
+                        child: const Text('Pilih'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -224,6 +293,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
         category: category,
         stock: int.tryParse(stockCtrl.text) ?? 0,
         imageBase64: imageBase64,
+        sku: skuCtrl.text,
+        expiryDate: expiryDate,
       );
       setState(() {});
     }
@@ -274,6 +345,56 @@ class _InventoryScreenState extends State<InventoryScreen> {
     setState(() {});
   }
 
+  void _printLabel(Product p) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(border: Border.all(color: _navy, width: 0.5), borderRadius: BorderRadius.circular(8)),
+                  child: Column(
+                    children: [
+                      Text(p.name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 14)),
+                      const SizedBox(height: 8),
+                      QrImageView(data: p.sku.isEmpty ? p.id : p.sku, size: 140, backgroundColor: Colors.white),
+                      const SizedBox(height: 8),
+                      Text(p.sku.isEmpty ? '-' : p.sku, style: const TextStyle(fontSize: 12, color: _navy, fontFamily: 'monospace')),
+                      const SizedBox(height: 4),
+                      Text(_currency.format(p.price), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navy)),
+                      if (p.expiryDate != null) ...[
+                        const SizedBox(height: 4),
+                        Text('EXP: ${_dateFmt.format(p.expiryDate!)}', style: const TextStyle(fontSize: 11, color: Colors.red)),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Preview stiker — sambungkan ke printer label buat cetak fisik.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tutup'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final allItems = DbService.products.values.toList()
@@ -281,7 +402,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final q = _query.trim().toLowerCase();
     final items = q.isEmpty
         ? allItems
-        : allItems.where((p) => p.name.toLowerCase().contains(q) || p.category.toLowerCase().contains(q)).toList();
+        : allItems.where((p) => p.name.toLowerCase().contains(q) || p.category.toLowerCase().contains(q) || p.sku.toLowerCase().contains(q)).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -299,7 +420,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               controller: _searchCtrl,
               onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
-                hintText: 'Cari nama produk atau kategori...',
+                hintText: 'Cari nama produk, kategori, atau SKU...',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -323,6 +444,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     itemBuilder: (ctx, i) {
                       final p = items[i];
                       final low = p.stock <= 5;
+                      final expiringSoon = p.expiryDate != null && p.expiryDate!.isBefore(DateTime.now().add(const Duration(days: 7)));
                       return ListTile(
                         leading: Container(
                           width: 44,
@@ -339,7 +461,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               : const Icon(Icons.local_cafe_outlined, color: _navy, size: 20),
                         ),
                         title: Text(p.name),
-                        subtitle: Text('${p.category} • ${_currency.format(p.price)}'),
+                        subtitle: Text(
+                          '${p.category} • ${_currency.format(p.price)} • ${p.sku.isEmpty ? "belum ada SKU" : p.sku}'
+                          '${p.expiryDate != null ? " • EXP ${_dateFmt.format(p.expiryDate!)}" : ""}',
+                          style: TextStyle(fontSize: 11, color: expiringSoon ? Colors.red : null),
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -359,6 +485,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 ),
                               ),
                             ),
+                            IconButton(icon: const Icon(Icons.qr_code, size: 18), tooltip: 'Cetak Label', onPressed: () => _printLabel(p)),
                             IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _editProduct(p)),
                           ],
                         ),

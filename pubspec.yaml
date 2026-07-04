@@ -19,6 +19,7 @@ dependencies:
   fl_chart: ^0.68.0
   image_picker: ^1.1.2
   reorderable_grid_view: ^2.2.8
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
