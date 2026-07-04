@@ -41,6 +41,7 @@ class ReceiptView extends StatelessWidget {
       customerName = tx.guestName;
     }
 
+    final isVoided = tx.status == 'void';
     final isClosed = tx.paymentMethod != 'unpaid';
 
     return Column(
@@ -63,17 +64,17 @@ class ReceiptView extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: isClosed ? Colors.green.shade50 : Colors.orange.shade50,
+              color: isVoided ? Colors.grey.shade300 : (isClosed ? Colors.green.shade50 : Colors.orange.shade50),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: isClosed ? Colors.green : Colors.orange),
+              border: Border.all(color: isVoided ? Colors.grey.shade600 : (isClosed ? Colors.green : Colors.orange)),
             ),
             child: Text(
-              isClosed ? 'PAID — BILL CLOSED' : 'CHECK — UNPAID',
+              isVoided ? 'VOIDED' : (isClosed ? 'PAID — BILL CLOSED' : 'CHECK — UNPAID'),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
-                color: isClosed ? Colors.green.shade800 : Colors.orange.shade800,
+                color: isVoided ? Colors.grey.shade800 : (isClosed ? Colors.green.shade800 : Colors.orange.shade800),
               ),
             ),
           ),

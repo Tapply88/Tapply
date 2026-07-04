@@ -1,3 +1,4 @@
+cat > lib/services/db_service.dart << 'DBEOF'
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
@@ -1064,3 +1065,782 @@ class DbService {
     return result;
   }
 }
+DBEOF
+
+cat > lib/widgets/receipt_view.dart << 'RECEOF'
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../models/transaction.dart';
+import '../services/db_service.dart';
+
+const navyColor = Color(0xFF092762);
+
+String paymentMethodLabel(String code) {
+  switch (code) {
+    case 'cash':
+      return 'Cash';
+    case 'qris_manual':
+      return 'QRIS (Manual)';
+    case 'qris_midtrans':
+      return 'QRIS / E-Wallet (Midtrans)';
+    case 'edc_BCA':
+      return 'EDC BCA';
+    case 'edc_Mandiri':
+      return 'EDC Mandiri';
+    case 'edc_BNI':
+      return 'EDC BNI';
+    default:
+      return code;
+  }
+}
+
+/// Receipt widget reused on: post-payment screen & transaction history.
+class ReceiptView extends StatelessWidget {
+  final TransactionRecord tx;
+  const ReceiptView({super.key, required this.tx});
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    String? customerName;
+    if (tx.memberId != null) {
+      final m = DbService.members.get(tx.memberId);
+      if (m != null) customerName = '${m.name} (member)';
+    } else if (tx.guestName != null && tx.guestName!.isNotEmpty) {
+      customerName = tx.guestName;
+    }
+
+    final isVoided = tx.status == 'void';
+    final isClosed = tx.paymentMethod != 'unpaid';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (tx.queueCode != null && tx.queueCode!.isNotEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                children: [
+                  const Text('QUEUE NUMBER', style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1)),
+                  Text(tx.queueCode!, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: navyColor)),
+                ],
+              ),
+            ),
+          ),
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isVoided ? Colors.grey.shade300 : (isClosed ? Colors.green.shade50 : Colors.orange.shade50),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: isVoided ? Colors.grey.shade600 : (isClosed ? Colors.green : Colors.orange)),
+            ),
+            child: Text(
+              isVoided ? 'VOIDED' : (isClosed ? 'PAID — BILL CLOSED' : 'CHECK — UNPAID'),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+                color: isVoided ? Colors.grey.shade800 : (isClosed ? Colors.green.shade800 : Colors.orange.shade800),
+              ),
+            ),
+          ),
+        ),
+        Center(
+          child: Column(
+            children: [
+              if (DbService.businessLogoBase64 != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    height: 56,
+                    child: Image.memory(base64Decode(DbService.businessLogoBase64!), fit: BoxFit.contain),
+                  ),
+                ),
+              Text(DbService.businessName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: navyColor)),
+              if (DbService.businessAddress.isNotEmpty)
+                Text(DbService.businessAddress, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              if (DbService.businessPhone.isNotEmpty)
+                Text(DbService.businessPhone, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+        const Divider(height: 24),
+        if (tx.receiptNumber != null)
+          Text('Receipt No.: ${tx.receiptNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text('Order ID: ${tx.id.substring(0, tx.id.length >= 8 ? 8 : tx.id.length).toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(tx.salesType, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (customerName != null)
+          Text('Customer: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        if (tx.cashierName != null && tx.cashierName!.isNotEmpty)
+          Text('Served by: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        const SizedBox(height: 8),
+        ...tx.items.map((item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${item.productName} x${item.qty}', style: const TextStyle(fontSize: 13)),
+                        if (item.note != null && item.note!.isNotEmpty)
+                          Text(item.note!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      ],
+                    ),
+                  ),
+                  Text(currency.format(item.subtotal), style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            )),
+        const Divider(height: 20),
+        _row(currency, 'Sub-Total', tx.itemsSubtotal),
+        if (DbService.showZeroAmountRows || tx.taxAmount != 0) _row(currency, 'Tax', tx.taxAmount),
+        if (DbService.showZeroAmountRows || tx.serviceAmount != 0) _row(currency, 'Service', tx.serviceAmount),
+        if (tx.discountAmount > 0)
+          _row(
+            currency,
+            (tx.discountLabel != null && tx.discountLabel!.isNotEmpty) ? 'Discount (${tx.discountLabel})' : 'Discount',
+            -tx.discountAmount,
+          ),
+        if (DbService.showZeroAmountRows || tx.roundingAdjustment != 0) _row(currency, 'Rounding', tx.roundingAdjustment),
+        const Divider(height: 20),
+        _row(currency, 'Total', tx.total, bold: true),
+        const SizedBox(height: 10),
+        // Payment method + cash tendered/change go right below the total.
+        _row(currency, 'Payment', 0, textValue: paymentMethodLabel(tx.paymentMethod)),
+        if (tx.paymentMethod == 'cash' && tx.cashReceived != null) ...[
+          _row(currency, 'Cash Received', tx.cashReceived!),
+          if (tx.changeAmount != null && tx.changeAmount! > 0) _row(currency, 'Change', tx.changeAmount!),
+        ],
+        const SizedBox(height: 20),
+        Center(child: Text(DbService.receiptFooterText, style: const TextStyle(fontSize: 12, color: Colors.grey))),
+        const SizedBox(height: 16),
+        Center(
+          child: Column(
+            children: [
+              const Text('powered by', style: TextStyle(fontSize: 9, color: Colors.grey)),
+              const SizedBox(height: 2),
+              Image.asset('assets/logo.png', height: 20),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(NumberFormat currency, String label, int amount, {bool bold = false, String? textValue}) {
+    final style = TextStyle(
+      fontSize: bold ? 15 : 13,
+      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+      color: navyColor,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text(textValue ?? currency.format(amount), style: style),
+        ],
+      ),
+    );
+  }
+}
+RECEOF
+
+cat > lib/screens/report_screen.dart << 'REPEOF'
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
+import '../services/db_service.dart';
+import '../widgets/receipt_view.dart';
+
+const _navy = Color(0xFF092762);
+
+class ReportScreen extends StatefulWidget {
+  const ReportScreen({super.key});
+
+  @override
+  State<ReportScreen> createState() => _ReportScreenState();
+}
+
+class _ReportScreenState extends State<ReportScreen> {
+  Future<bool> _confirmPin(BuildContext context, String title) async {
+    final pinCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title, style: const TextStyle(color: _navy)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter the manager PIN to continue.'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: pinCtrl,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'PIN'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              if (pinCtrl.text == DbService.managerPin) {
+                Navigator.pop(ctx, true);
+              } else {
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
+  void _showReceipt(BuildContext context, dynamic tx) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Dialog(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ReceiptView(tx: tx),
+                      const SizedBox(height: 16),
+                      if (tx.status == 'paid') ...[
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red), foregroundColor: Colors.red),
+                          icon: const Icon(Icons.block, size: 16),
+                          label: const Text('Void Receipt'),
+                          onPressed: () async {
+                            final confirmed = await _confirmPin(ctx, 'Void This Receipt?');
+                            if (!confirmed) return;
+                            await DbService.voidTransaction(tx.id);
+                            setDialogState(() {});
+                            if (mounted) setState(() {});
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: DbService.transactions.listenable(),
+      builder: (context, box, _) {
+        final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+        final todayTotal = DbService.totalSalesToday();
+        final byProduct = DbService.salesByProduct();
+        final sortedEntries = byProduct.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+        final allTx = DbService.transactions.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        final lowStock = DbService.products.values.where((p) => p.stock <= 5).toList();
+
+        return Scaffold(
+          appBar: AppBar(title: const Text('Sales Report')),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Card(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Today\'s Sales'),
+                      const SizedBox(height: 4),
+                      Text(currency.format(todayTotal), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+              if (lowStock.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Card(
+                  color: Colors.red.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('⚠ Low Stock (${lowStock.length} products)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade800)),
+                        const SizedBox(height: 8),
+                        ...lowStock.map((p) => Text('${p.name} — ${p.stock} left', style: TextStyle(color: Colors.red.shade800))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              const Text('Sales by Payment Method', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...(() {
+                final byMethod = DbService.salesByPaymentMethod();
+                final sorted = byMethod.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+                if (sorted.isEmpty) {
+                  return [const Text('No transactions yet.', style: TextStyle(fontSize: 12, color: Colors.grey))];
+                }
+                return sorted
+                    .map((e) => ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.payments_outlined, size: 18, color: _navy),
+                          title: Text(paymentMethodLabel(e.key)),
+                          trailing: Text(currency.format(e.value), style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                        ))
+                    .toList();
+              })(),
+              const SizedBox(height: 20),
+              const Text('Best-selling Products (all time)', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...sortedEntries.map((e) => ListTile(
+                    dense: true,
+                    title: Text(e.key),
+                    trailing: Text('${e.value} sold'),
+                  )),
+              const SizedBox(height: 20),
+              const Text('Transaction History', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Tap to view full receipt', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const SizedBox(height: 8),
+              ...allTx.take(100).map((t) {
+                final voided = t.status == 'void';
+                return ListTile(
+                  dense: true,
+                  onTap: () => _showReceipt(context, t),
+                  title: Text(
+                    currency.format(t.total),
+                    style: voided ? const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey) : null,
+                  ),
+                  subtitle: Text('${paymentMethodLabel(t.paymentMethod)} • ${DateFormat('dd MMM yyyy, HH:mm').format(t.createdAt)}'),
+                  trailing: Text(
+                    voided ? 'VOID' : t.status,
+                    style: TextStyle(color: voided ? Colors.red : null, fontWeight: voided ? FontWeight.bold : null),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+REPEOF
+
+cat > server/index.js << 'SRVEOF'
+// Backend proxy kecil buat Tapply — nyimpen Midtrans Server Key dengan aman.
+// Jalankan: cd server && npm install && node index.js
+// Deploy ke Railway/Render/Fly.io/VPS. JANGAN commit .env ke git.
+
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const midtransClient = require('midtrans-client');
+const { createClient } = require('@supabase/supabase-js');
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '2mb' }));
+
+// Service Role Key -> akses penuh ke Supabase, TAPI cuma dipegang server ini,
+// gak pernah dikirim ke app Flutter. Itu yang bikin app bisa "nulis" data
+// biar aman walau app-nya sendiri gak login ke Supabase.
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+const snap = new midtransClient.Snap({
+  isProduction: false, // ganti true kalau sudah live
+  serverKey: process.env.MIDTRANS_SERVER_KEY,
+  clientKey: process.env.MIDTRANS_CLIENT_KEY,
+});
+
+app.post('/create-transaction', async (req, res) => {
+  try {
+    const { order_id, gross_amount, customer_name } = req.body;
+    const parameter = {
+      transaction_details: {
+        order_id,
+        gross_amount,
+      },
+      customer_details: {
+        first_name: customer_name || 'Pelanggan',
+      },
+      enabled_payments: ['gopay', 'qris', 'other_qris', 'bank_transfer'],
+    };
+    const transaction = await snap.createTransaction(parameter);
+    res.json(transaction); // berisi token & redirect_url
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/status/:orderId', async (req, res) => {
+  try {
+    const apiClient = new midtransClient.CoreApi({
+      isProduction: false,
+      serverKey: process.env.MIDTRANS_SERVER_KEY,
+      clientKey: process.env.MIDTRANS_CLIENT_KEY,
+    });
+    const status = await apiClient.transaction.status(req.params.orderId);
+    res.json(status);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Webhook notifikasi dari Midtrans (set URL ini di dashboard Midtrans)
+app.post('/midtrans-webhook', async (req, res) => {
+  console.log('Notifikasi Midtrans masuk:', req.body);
+  // TODO: update status transaksi di database kamu berdasarkan req.body
+  res.sendStatus(200);
+});
+
+// ---- Sinkronisasi transaksi dari app kasir (Flutter) ke dashboard web ----
+// App Flutter kirim: header 'x-api-key' (dari Setelan > Sinkronisasi di dashboard)
+// + body JSON transaksi. Server ini yang cari tau business_id-nya, terus nulis
+// ke Supabase pakai Service Role Key (bukan app-nya langsung).
+app.post('/sync/transaction', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) {
+      return res.status(401).json({ error: 'x-api-key header kosong' });
+    }
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+
+    if (businessError || !business) {
+      return res.status(401).json({ error: 'API key gak valid' });
+    }
+
+    const tx = req.body;
+    const { error: insertError } = await supabaseAdmin.from('transactions').upsert({
+      id: tx.id,
+      business_id: business.id,
+      items: tx.items,
+      total: tx.total,
+      tax_amount: tx.taxAmount,
+      service_amount: tx.serviceAmount,
+      discount_amount: tx.discountAmount,
+      discount_label: tx.discountLabel,
+      rounding_adjustment: tx.roundingAdjustment,
+      payment_method: tx.paymentMethod,
+      sales_type: tx.salesType,
+      guest_name: tx.guestName,
+      cashier_name: tx.cashierName,
+      cashier_email: tx.cashierEmail,
+      receipt_number: tx.receiptNumber,
+      queue_code: tx.queueCode,
+      status: tx.status,
+      created_at: tx.createdAt,
+    });
+
+    if (insertError) {
+      console.error(insertError);
+      return res.status(500).json({ error: 'Gagal simpan ke database' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Sinkronisasi member (upsert berdasarkan id lokal dari app) ----
+app.post('/sync/member', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const m = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('members').upsert({
+      id: m.id,
+      business_id: business.id,
+      name: m.name,
+      phone: m.phone,
+      points: m.points,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan member' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Sinkronisasi promo (upsert berdasarkan id lokal dari app) ----
+app.post('/sync/promo', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const p = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('promos').upsert({
+      id: p.id,
+      business_id: business.id,
+      name: p.name,
+      discount_type: p.discountType,
+      value: p.value,
+      scope: p.scope,
+      product_ids: p.productIds ?? [],
+      start_date: p.startDate ? p.startDate.substring(0, 10) : null,
+      end_date: p.endDate ? p.endDate.substring(0, 10) : null,
+      min_purchase: p.minPurchase,
+      active: p.active,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan promo' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Sinkronisasi produk (upsert berdasarkan id lokal dari app) ----
+// Foto produk sengaja gak dikirim di sini (base64 kebesaran) — cuma data teks.
+app.post('/sync/product', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const p = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('products').upsert({
+      id: p.id,
+      business_id: business.id,
+      name: p.name,
+      price: p.price,
+      category: p.category,
+      stock: p.stock,
+      sort_order: p.sortOrder,
+      is_active: p.isActive,
+      sku: p.sku,
+      volume: p.volume,
+      label_size: p.labelSize,
+      show_price_on_label: p.showPriceOnLabel,
+      label_variant: p.labelVariant,
+      label_addons: p.labelAddons || [],
+      expiry_date: p.expiryDate ? p.expiryDate.substring(0, 10) : null,
+      production_date: p.productionDate ? p.productionDate.substring(0, 10) : null,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan produk' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Sinkronisasi shift (upsert berdasarkan id lokal dari app) ----
+app.post('/sync/shift', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const s = req.body;
+    const { error: upsertError } = await supabaseAdmin.from('shifts').upsert({
+      id: s.id,
+      business_id: business.id,
+      cashier_name: s.cashierName,
+      cashier_email: s.cashierEmail,
+      start_time: s.startTime,
+      starting_cash: s.startingCash,
+      end_time: s.endTime,
+      ending_cash_counted: s.endingCashCounted,
+      status: s.status,
+      note: s.note,
+    });
+
+    if (upsertError) {
+      console.error(upsertError);
+      return res.status(500).json({ error: 'Gagal simpan shift' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Tarik data dari cloud ke app (bagian dari sync dua arah) ----
+// App manggil ini pas cashier klik "Tarik Data dari Dashboard" di Setelan.
+app.get('/sync/pull', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: businessFull, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('*')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !businessFull) return res.status(401).json({ error: 'API key gak valid' });
+    const business = businessFull;
+
+    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }] = await Promise.all([
+      supabaseAdmin.from('products').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('members').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('promos').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('variations').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('addons').select('*').eq('business_id', business.id),
+    ]);
+
+    res.json({
+      products: (products || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        category: p.category,
+        stock: p.stock,
+        sortOrder: p.sort_order,
+        isActive: p.is_active,
+        sku: p.sku,
+        volume: p.volume,
+        labelSize: p.label_size,
+        showPriceOnLabel: p.show_price_on_label,
+        labelVariant: p.label_variant,
+        labelAddons: p.label_addons || [],
+        expiryDate: p.expiry_date,
+        productionDate: p.production_date,
+        imageBase64: p.image_base64,
+      })),
+      members: (members || []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        phone: m.phone,
+        points: m.points,
+      })),
+      promos: (promos || []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        discountType: p.discount_type,
+        value: p.value,
+        scope: p.scope,
+        productIds: p.product_ids || [],
+        startDate: p.start_date,
+        endDate: p.end_date,
+        minPurchase: p.min_purchase,
+        active: p.active,
+      })),
+      variations: (variations || []).map((v) => ({
+        id: v.id,
+        name: v.name,
+        sortOrder: v.sort_order,
+      })),
+      addons: (addons || []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        price: a.price,
+        sortOrder: a.sort_order,
+      })),
+      business: {
+        name: business.name,
+        address: business.address,
+        phone: business.phone,
+        footerText: business.footer_text,
+        taxPercent: business.tax_percent,
+        servicePercent: business.service_percent,
+        discountPercent: business.discount_percent,
+        roundingEnabled: business.rounding_enabled,
+        roundingNearest: business.rounding_nearest,
+        managerPin: business.manager_pin,
+        pinRequiredForCancel: business.pin_required_for_cancel,
+        printCheckEnabled: business.print_check_enabled,
+        queueNumberEnabled: business.queue_number_enabled,
+        queueStartNumber: business.queue_start_number,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Tapply backend jalan di port ${PORT}`));
+SRVEOF
+
+echo 'Selesai. Jalankan: flutter clean && flutter pub get && flutter run -d web-server --web-port 8081 --release'
+echo 'Untuk server/: git add . && git commit -m "void receipt with pin, fix transaction sync upsert" && git push (Railway auto-redeploy)'

@@ -91,7 +91,8 @@ app.post('/sync/transaction', async (req, res) => {
     }
 
     const tx = req.body;
-    const { error: insertError } = await supabaseAdmin.from('transactions').insert({
+    const { error: insertError } = await supabaseAdmin.from('transactions').upsert({
+      id: tx.id,
       business_id: business.id,
       items: tx.items,
       total: tx.total,
