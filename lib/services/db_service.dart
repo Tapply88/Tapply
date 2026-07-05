@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -376,6 +377,15 @@ class DbService {
   static Future<void> setPrintCheckEnabled(bool v) async => settings.put('printCheckEnabled', v);
   static String get managerPin => settings.get('managerPin', defaultValue: '1234');
   static Future<void> setManagerPin(String pin) async => settings.put('managerPin', pin);
+
+  /// PIN gak lagi disimpen/dibandingin sebagai teks polos — di-hash pakai
+  /// SHA-256 + pepper tetap, sama persis kayak yang dipakai di dashboard web
+  /// (lib/hash.ts), biar hasil hash-nya identik dan bisa dibandingin.
+  static const String _pinPepper = 'tapply-pin-pepper-v1';
+  static String hashPin(String pin) {
+    final bytes = utf8.encode(pin + _pinPepper);
+    return sha256.convert(bytes).toString();
+  }
   static bool get pinRequiredForCancel => settings.get('pinRequiredForCancel', defaultValue: true);
   static Future<void> setPinRequiredForCancel(bool v) async => settings.put('pinRequiredForCancel', v);
   static String get language => settings.get('language', defaultValue: 'id');
@@ -663,8 +673,9 @@ class DbService {
   static List<StaffMember> get staffList => staffBoxRef.values.toList()..sort((a, b) => a.name.compareTo(b.name));
 
   static StaffMember? findStaffByPin(String pin) {
+    final hashed = hashPin(pin);
     try {
-      return staffBoxRef.values.firstWhere((s) => s.pin == pin);
+      return staffBoxRef.values.firstWhere((s) => s.pin == hashed);
     } catch (_) {
       return null;
     }

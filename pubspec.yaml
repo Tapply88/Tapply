@@ -21,6 +21,7 @@ dependencies:
   reorderable_grid_view: ^2.2.8
   qr_flutter: ^4.1.0
   barcode_widget: ^2.0.4
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:

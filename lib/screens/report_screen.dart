@@ -39,7 +39,7 @@ class _ReportScreenState extends State<ReportScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              if (pinCtrl.text == DbService.managerPin) {
+              if (DbService.hashPin(pinCtrl.text) == DbService.managerPin) {
                 Navigator.pop(ctx, true);
               } else {
                 ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Wrong PIN')));
