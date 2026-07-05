@@ -385,6 +385,7 @@ app.get('/sync/pull', async (req, res) => {
         queueStartNumber: business.queue_start_number,
         pointsRedemptionValue: business.points_redemption_value,
         pointsRedemptionMultiple: business.points_redemption_multiple,
+        pointsEarnRate: business.points_earn_rate,
         logoBase64: business.logo_base64,
       },
     });

@@ -30,7 +30,4 @@ class Member extends HiveObject {
     required this.joinedAt,
     this.birthDate,
   });
-
-  // 1 point per Rp10.000 belanja (bisa diubah sesuai kebijakan)
-  static int pointsFromAmount(int amount) => (amount / 10000).floor();
 }
