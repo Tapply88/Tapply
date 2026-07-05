@@ -383,6 +383,8 @@ app.get('/sync/pull', async (req, res) => {
         printCheckEnabled: business.print_check_enabled,
         queueNumberEnabled: business.queue_number_enabled,
         queueStartNumber: business.queue_start_number,
+        pointsRedemptionValue: business.points_redemption_value,
+        pointsRedemptionMultiple: business.points_redemption_multiple,
         logoBase64: business.logo_base64,
       },
     });

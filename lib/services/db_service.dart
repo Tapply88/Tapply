@@ -392,6 +392,12 @@ class DbService {
   static String get language => settings.get('language', defaultValue: 'id');
   static Future<void> setLanguage(String lang) async => settings.put('language', lang);
 
+  static int get pointsRedemptionValue => settings.get('pointsRedemptionValue', defaultValue: 100);
+  static Future<void> setPointsRedemptionValue(int value) async => settings.put('pointsRedemptionValue', value);
+
+  static int get pointsRedemptionMultiple => settings.get('pointsRedemptionMultiple', defaultValue: 300);
+  static Future<void> setPointsRedemptionMultiple(int value) async => settings.put('pointsRedemptionMultiple', value);
+
   // ---- Sinkronisasi ke dashboard web (satu arah: app -> cloud) ----
   static bool get syncEnabled => syncServerUrl.isNotEmpty && syncApiKey.isNotEmpty;
   static bool get isPaired => syncEnabled;
@@ -942,6 +948,8 @@ class DbService {
         if (business['printCheckEnabled'] != null) await setPrintCheckEnabled(business['printCheckEnabled']);
         if (business['queueNumberEnabled'] != null) await setQueueNumberEnabled(business['queueNumberEnabled']);
         if (business['queueStartNumber'] != null) await setQueueStartNumber(business['queueStartNumber']);
+        if (business['pointsRedemptionValue'] != null) await setPointsRedemptionValue(business['pointsRedemptionValue']);
+        if (business['pointsRedemptionMultiple'] != null) await setPointsRedemptionMultiple(business['pointsRedemptionMultiple']);
       }
 
       return (
