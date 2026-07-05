@@ -344,6 +344,7 @@ app.get('/sync/pull', async (req, res) => {
         id: v.id,
         name: v.name,
         sortOrder: v.sort_order,
+        price: v.price,
       })),
       addons: (addons || []).map((a) => ({
         id: a.id,

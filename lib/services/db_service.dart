@@ -865,9 +865,10 @@ class DbService {
         if (existing != null) {
           existing.name = raw['name'];
           existing.sortOrder = raw['sortOrder'] ?? existing.sortOrder;
+          existing.price = raw['price'] ?? existing.price;
           await existing.save();
         } else {
-          await variationsBox.put(id, Variation(id: id, name: raw['name'], sortOrder: raw['sortOrder'] ?? 0));
+          await variationsBox.put(id, Variation(id: id, name: raw['name'], sortOrder: raw['sortOrder'] ?? 0, price: raw['price'] ?? 0));
         }
       }
 
