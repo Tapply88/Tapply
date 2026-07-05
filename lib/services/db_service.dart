@@ -330,6 +330,7 @@ class DbService {
       'name': m.name,
       'phone': m.phone,
       'points': m.points,
+      'birthDate': m.birthDate?.toIso8601String(),
     };
     try {
       final response = await http
@@ -570,6 +571,8 @@ class DbService {
       'endDate': p.endDate?.toIso8601String(),
       'minPurchase': p.minPurchase,
       'active': p.active,
+      'triggerType': p.triggerType,
+      'triggerMonthDay': p.triggerMonthDay,
     };
     try {
       final response = await http
@@ -604,12 +607,23 @@ class DbService {
   /// Semua promo yang aktif, dalam rentang tanggal, dan memenuhi minimum pembelian
   /// (dicek terhadap subtotal seluruh struk, atau subtotal produk terkait kalau scope
   /// promonya per-produk) — dipakai buat nampilin pilihan ke kasir.
-  static List<Promo> validPromosFor({required int cartSubtotal, Map<String, int>? productSubtotals}) {
+  static List<Promo> validPromosFor({required int cartSubtotal, Map<String, int>? productSubtotals, Member? selectedMember}) {
     final now = DateTime.now();
+    final todayMonthDay = '${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     return promos.values.where((p) {
       if (!p.active) return false;
       if (p.startDate != null && now.isBefore(p.startDate!)) return false;
       if (p.endDate != null && now.isAfter(p.endDate!)) return false;
+
+      if (p.triggerType == 'birthday') {
+        if (selectedMember?.birthDate == null) return false;
+        final b = selectedMember!.birthDate!;
+        final memberMonthDay = '${b.month.toString().padLeft(2, '0')}-${b.day.toString().padLeft(2, '0')}';
+        if (memberMonthDay != todayMonthDay) return false;
+      } else if (p.triggerType == 'specific_date') {
+        if (p.triggerMonthDay == null || p.triggerMonthDay != todayMonthDay) return false;
+      }
+
       if (p.scope == 'product') {
         final eligible = p.productIds.fold<int>(0, (s, id) => s + (productSubtotals?[id] ?? 0));
         if (eligible <= 0) return false;
@@ -840,6 +854,7 @@ class DbService {
           existing.name = raw['name'];
           existing.phone = raw['phone'];
           existing.points = raw['points'] ?? existing.points;
+          existing.birthDate = raw['birthDate'] != null ? DateTime.tryParse(raw['birthDate']) : existing.birthDate;
           await existing.save();
         } else {
           await members.put(
@@ -850,6 +865,7 @@ class DbService {
               phone: raw['phone'],
               points: raw['points'] ?? 0,
               joinedAt: DateTime.now(),
+              birthDate: raw['birthDate'] != null ? DateTime.tryParse(raw['birthDate']) : null,
             ),
           );
         }
@@ -870,6 +886,8 @@ class DbService {
           endDate: raw['endDate'] != null ? DateTime.tryParse(raw['endDate']) : null,
           minPurchase: raw['minPurchase'] ?? 0,
           active: raw['active'] ?? true,
+          triggerType: raw['triggerType'] ?? 'always',
+          triggerMonthDay: raw['triggerMonthDay'],
         );
         await promos.put(id, promo);
         promoCount++;

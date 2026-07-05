@@ -153,7 +153,7 @@ class _CashierScreenState extends State<CashierScreen> {
   }
 
   ({int amount, String label, Promo? promo}) _resolveDiscount() {
-    final valid = DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals);
+    final valid = DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals, selectedMember: _selectedMember);
 
     if (_chosenPromoId == 'NONE') {
       if (DbService.discountEnabled) {
@@ -219,7 +219,7 @@ class _CashierScreenState extends State<CashierScreen> {
   String get _discountLabel => _resolveDiscount().label;
 
   Future<void> _openPromoPicker() async {
-    final valid = DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals);
+    final valid = DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals, selectedMember: _selectedMember);
     if (valid.isEmpty) return;
     String? temp = _chosenPromoId ?? (valid.length == 1 ? valid.first.id : null);
 
@@ -1837,7 +1837,7 @@ class _CashierScreenState extends State<CashierScreen> {
                             },
                           ),
                   ),
-                  if (DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals).isNotEmpty) _buildPromoBanner(),
+                  if (DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals, selectedMember: _selectedMember).isNotEmpty) _buildPromoBanner(),
                   const Divider(height: 1),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1918,7 +1918,7 @@ class _CashierScreenState extends State<CashierScreen> {
   }
 
   Widget _buildPromoBanner() {
-    final valid = DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals);
+    final valid = DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals, selectedMember: _selectedMember);
     final resolved = _resolveDiscount();
     final applied = resolved.promo != null;
     final pending = !applied && valid.length > 1 && _chosenPromoId != 'NONE';

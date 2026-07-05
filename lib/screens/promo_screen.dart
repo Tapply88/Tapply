@@ -28,6 +28,8 @@ class _PromoScreenState extends State<PromoScreen> {
     DateTime? startDate = existing?.startDate;
     DateTime? endDate = existing?.endDate;
     bool active = existing?.active ?? true;
+    String triggerType = existing?.triggerType ?? 'always';
+    String? triggerMonthDay = existing?.triggerMonthDay;
 
     await showDialog(
       context: context,
@@ -112,6 +114,53 @@ class _PromoScreenState extends State<PromoScreen> {
                     ],
                   ),
                   const Text('Leave dates blank to run indefinitely.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  const SizedBox(height: 12),
+                  const Text('WHEN DOES THIS APPLY', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Always (within the date range above)', style: TextStyle(fontSize: 13)),
+                    value: 'always',
+                    groupValue: triggerType,
+                    onChanged: (v) => setDialogState(() => triggerType = v!),
+                  ),
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("Only on the member's birthday", style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('A member must be selected at checkout, and their birthday must be on file.', style: TextStyle(fontSize: 11)),
+                    value: 'birthday',
+                    groupValue: triggerType,
+                    onChanged: (v) => setDialogState(() => triggerType = v!),
+                  ),
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Only on a specific date every year', style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('e.g. store anniversary — repeats annually, year is ignored.', style: TextStyle(fontSize: 11)),
+                    value: 'specific_date',
+                    groupValue: triggerType,
+                    onChanged: (v) => setDialogState(() => triggerType = v!),
+                  ),
+                  if (triggerType == 'specific_date')
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8, bottom: 8),
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => triggerMonthDay = '${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}');
+                          }
+                        },
+                        child: Text(
+                          triggerMonthDay == null ? 'Pick date (day & month)' : 'Every ${triggerMonthDay!.split('-')[1]}/${triggerMonthDay!.split('-')[0]}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
                   const Text('APPLIES TO', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
                   RadioListTile<String>(
@@ -203,6 +252,8 @@ class _PromoScreenState extends State<PromoScreen> {
                     active: active,
                     scope: scope,
                     productIds: selectedProductIds.toList(),
+                    triggerType: triggerType,
+                    triggerMonthDay: triggerType == 'specific_date' ? triggerMonthDay : null,
                   );
                   await DbService.savePromo(promo);
                   if (ctx.mounted) Navigator.pop(ctx);
@@ -260,7 +311,8 @@ class _PromoScreenState extends State<PromoScreen> {
                   title: Text(p.name, style: TextStyle(color: p.active ? _navy : Colors.grey, fontWeight: FontWeight.bold)),
                   subtitle: Text(
                     'Discount $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}'
-                    '${p.scope == 'product' ? ' • ${p.productIds.length} products (preset)' : p.scope == 'item' ? ' • per item${p.productIds.isNotEmpty ? ' (${p.productIds.length} products)' : ' (all products)'}' : ' • entire receipt'}\n$dateLabel',
+                    '${p.scope == 'product' ? ' • ${p.productIds.length} products (preset)' : p.scope == 'item' ? ' • per item${p.productIds.isNotEmpty ? ' (${p.productIds.length} products)' : ' (all products)'}' : ' • entire receipt'}'
+                    '${p.triggerType == 'birthday' ? ' • 🎂 birthday only' : p.triggerType == 'specific_date' ? ' • 📅 ${p.triggerMonthDay ?? ''} only' : ''}\n$dateLabel',
                     style: const TextStyle(fontSize: 12),
                   ),
                   isThreeLine: true,

@@ -34,6 +34,12 @@ class Promo extends HiveObject {
   @HiveField(9)
   List<String> productIds; // dipakai kalau scope == 'product'
 
+  @HiveField(10)
+  String triggerType; // 'always' | 'birthday' | 'specific_date'
+
+  @HiveField(11)
+  String? triggerMonthDay; // format 'MM-DD', dipakai buat 'specific_date' (dan dicek ulang buat 'birthday' vs member.birthDate)
+
   Promo({
     required this.id,
     required this.name,
@@ -45,5 +51,7 @@ class Promo extends HiveObject {
     this.active = true,
     this.scope = 'cart',
     List<String>? productIds,
+    this.triggerType = 'always',
+    this.triggerMonthDay,
   }) : productIds = productIds ?? [];
 }

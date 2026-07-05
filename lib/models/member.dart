@@ -19,12 +19,16 @@ class Member extends HiveObject {
   @HiveField(4)
   DateTime joinedAt;
 
+  @HiveField(5)
+  DateTime? birthDate;
+
   Member({
     required this.id,
     required this.name,
     required this.phone,
     this.points = 0,
     required this.joinedAt,
+    this.birthDate,
   });
 
   // 1 point per Rp10.000 belanja (bisa diubah sesuai kebijakan)

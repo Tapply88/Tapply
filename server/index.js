@@ -144,6 +144,7 @@ app.post('/sync/member', async (req, res) => {
       name: m.name,
       phone: m.phone,
       points: m.points,
+      birth_date: m.birthDate ? m.birthDate.substring(0, 10) : null,
     });
 
     if (upsertError) {
@@ -183,6 +184,8 @@ app.post('/sync/promo', async (req, res) => {
       end_date: p.endDate ? p.endDate.substring(0, 10) : null,
       min_purchase: p.minPurchase,
       active: p.active,
+      trigger_type: p.triggerType ?? 'always',
+      trigger_month_day: p.triggerMonthDay ?? null,
     });
 
     if (upsertError) {
@@ -329,6 +332,7 @@ app.get('/sync/pull', async (req, res) => {
         name: m.name,
         phone: m.phone,
         points: m.points,
+        birthDate: m.birth_date,
       })),
       promos: (promos || []).map((p) => ({
         id: p.id,
@@ -341,6 +345,8 @@ app.get('/sync/pull', async (req, res) => {
         endDate: p.end_date,
         minPurchase: p.min_purchase,
         active: p.active,
+        triggerType: p.trigger_type,
+        triggerMonthDay: p.trigger_month_day,
       })),
       variations: (variations || []).map((v) => ({
         id: v.id,

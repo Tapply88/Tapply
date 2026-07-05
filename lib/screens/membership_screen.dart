@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../models/member.dart';
 import '../services/db_service.dart';
@@ -29,25 +30,52 @@ class _MembershipScreenState extends State<MembershipScreen> {
   Future<void> _addMember() async {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController(text: _searchCtrl.text.trim());
+    DateTime? birthDate;
+    final dateFmt = DateFormat('dd MMM yyyy');
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Register New Member'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number'), keyboardType: TextInputType.phone),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Register New Member'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number'), keyboardType: TextInputType.phone),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      birthDate == null ? 'Birthday (optional)' : 'Birthday: ${dateFmt.format(birthDate!)}',
+                      style: const TextStyle(fontSize: 13, color: _navy),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: DateTime(2000),
+                        firstDate: DateTime(1930),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setDialogState(() => birthDate = picked);
+                    },
+                    child: const Text('Pick'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _navy),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _navy),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
 
@@ -57,6 +85,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
         name: nameCtrl.text.trim(),
         phone: phoneCtrl.text.trim(),
         joinedAt: DateTime.now(),
+        birthDate: birthDate,
       );
       await DbService.saveMember(member);
       setState(() {
