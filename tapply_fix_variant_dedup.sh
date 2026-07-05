@@ -1,3 +1,4 @@
+cat > lib/services/db_service.dart << 'DBEOF'
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
@@ -1080,3 +1081,6 @@ class DbService {
     return result;
   }
 }
+DBEOF
+
+echo 'Selesai. Jalankan: flutter clean && flutter pub get && flutter run -d web-server --web-port 8081 --release'
