@@ -21,13 +21,14 @@ class AddonAdapter extends TypeAdapter<Addon> {
       name: fields[1] as String,
       price: fields[2] as int,
       sortOrder: fields[3] as int,
+      onlinePrice: fields[4] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Addon obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class AddonAdapter extends TypeAdapter<Addon> {
       ..writeByte(2)
       ..write(obj.price)
       ..writeByte(3)
-      ..write(obj.sortOrder);
+      ..write(obj.sortOrder)
+      ..writeByte(4)
+      ..write(obj.onlinePrice);
   }
 
   @override

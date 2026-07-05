@@ -21,13 +21,14 @@ class VariationAdapter extends TypeAdapter<Variation> {
       name: fields[1] as String,
       sortOrder: fields[2] as int,
       price: fields[3] as int,
+      onlinePrice: fields[4] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Variation obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class VariationAdapter extends TypeAdapter<Variation> {
       ..writeByte(2)
       ..write(obj.sortOrder)
       ..writeByte(3)
-      ..write(obj.price);
+      ..write(obj.price)
+      ..writeByte(4)
+      ..write(obj.onlinePrice);
   }
 
   @override

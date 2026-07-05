@@ -872,13 +872,13 @@ class DbService {
       await variationsBox.clear();
       for (final raw in (data['variations'] as List? ?? [])) {
         final id = raw['id'] as String;
-        await variationsBox.put(id, Variation(id: id, name: raw['name'], sortOrder: raw['sortOrder'] ?? 0, price: raw['price'] ?? 0));
+        await variationsBox.put(id, Variation(id: id, name: raw['name'], sortOrder: raw['sortOrder'] ?? 0, price: raw['price'] ?? 0, onlinePrice: raw['onlinePrice']));
       }
 
       await addonsBox.clear();
       for (final raw in (data['addons'] as List? ?? [])) {
         final id = raw['id'] as String;
-        await addonsBox.put(id, Addon(id: id, name: raw['name'], price: raw['price'] ?? 0, sortOrder: raw['sortOrder'] ?? 0));
+        await addonsBox.put(id, Addon(id: id, name: raw['name'], price: raw['price'] ?? 0, sortOrder: raw['sortOrder'] ?? 0, onlinePrice: raw['onlinePrice']));
       }
 
       await staffBoxRef.clear();

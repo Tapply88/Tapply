@@ -16,5 +16,8 @@ class Addon extends HiveObject {
   @HiveField(3)
   int sortOrder;
 
-  Addon({required this.id, required this.name, required this.price, this.sortOrder = 0});
+  @HiveField(4)
+  int? onlinePrice;
+
+  Addon({required this.id, required this.name, required this.price, this.sortOrder = 0, this.onlinePrice});
 }

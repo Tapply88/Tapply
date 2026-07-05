@@ -347,12 +347,14 @@ app.get('/sync/pull', async (req, res) => {
         name: v.name,
         sortOrder: v.sort_order,
         price: v.price,
+        onlinePrice: v.online_price,
       })),
       addons: (addons || []).map((a) => ({
         id: a.id,
         name: a.name,
         price: a.price,
         sortOrder: a.sort_order,
+        onlinePrice: a.online_price,
       })),
       staff: (staff || []).map((s) => ({
         id: s.id,
