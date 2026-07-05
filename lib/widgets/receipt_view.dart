@@ -20,7 +20,16 @@ String paymentMethodLabel(String code) {
       return 'EDC Mandiri';
     case 'edc_BNI':
       return 'EDC BNI';
+    case 'gofood':
+      return 'GoFood';
+    case 'grabfood':
+      return 'GrabFood';
+    case 'shopeefood':
+      return 'ShopeeFood';
+    case 'bank_transfer':
+      return 'Bank Transfer';
     default:
+      if (code.startsWith('other_')) return code.substring(6);
       return code;
   }
 }
@@ -47,6 +56,26 @@ class ReceiptView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Center(
+          child: Column(
+            children: [
+              if (DbService.businessLogoBase64 != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    height: 56,
+                    child: Image.memory(base64Decode(DbService.businessLogoBase64!), fit: BoxFit.contain),
+                  ),
+                ),
+              Text(DbService.businessName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: navyColor)),
+              if (DbService.businessAddress.isNotEmpty)
+                Text(DbService.businessAddress, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              if (DbService.businessPhone.isNotEmpty)
+                Text(DbService.businessPhone, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
         if (tx.queueCode != null && tx.queueCode!.isNotEmpty)
           Center(
             child: Padding(
@@ -77,25 +106,6 @@ class ReceiptView extends StatelessWidget {
                 color: isVoided ? Colors.grey.shade800 : (isClosed ? Colors.green.shade800 : Colors.orange.shade800),
               ),
             ),
-          ),
-        ),
-        Center(
-          child: Column(
-            children: [
-              if (DbService.businessLogoBase64 != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: SizedBox(
-                    height: 56,
-                    child: Image.memory(base64Decode(DbService.businessLogoBase64!), fit: BoxFit.contain),
-                  ),
-                ),
-              Text(DbService.businessName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: navyColor)),
-              if (DbService.businessAddress.isNotEmpty)
-                Text(DbService.businessAddress, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              if (DbService.businessPhone.isNotEmpty)
-                Text(DbService.businessPhone, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
           ),
         ),
         const Divider(height: 24),
