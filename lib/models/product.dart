@@ -52,6 +52,9 @@ class Product extends HiveObject {
   @HiveField(15)
   List<String> labelAddons;
 
+  @HiveField(16)
+  int? onlinePrice;
+
   Product({
     required this.id,
     required this.name,
@@ -69,5 +72,6 @@ class Product extends HiveObject {
     this.showPriceOnLabel = true,
     this.labelVariant,
     List<String>? labelAddons,
+    this.onlinePrice,
   }) : labelAddons = labelAddons ?? [];
 }

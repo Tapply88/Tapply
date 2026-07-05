@@ -235,6 +235,7 @@ class DbService {
       'labelAddons': p.labelAddons,
       'expiryDate': p.expiryDate?.toIso8601String(),
       'productionDate': p.productionDate?.toIso8601String(),
+      'onlinePrice': p.onlinePrice,
     };
     try {
       final response = await http
@@ -789,6 +790,7 @@ class DbService {
           existing.expiryDate = raw['expiryDate'] != null ? DateTime.tryParse(raw['expiryDate']) : existing.expiryDate;
           existing.productionDate = raw['productionDate'] != null ? DateTime.tryParse(raw['productionDate']) : existing.productionDate;
           if (raw['imageBase64'] != null) existing.imageBase64 = raw['imageBase64'];
+          existing.onlinePrice = raw['onlinePrice'];
           await existing.save();
         } else {
           await products.put(
@@ -810,6 +812,7 @@ class DbService {
               expiryDate: raw['expiryDate'] != null ? DateTime.tryParse(raw['expiryDate']) : null,
               productionDate: raw['productionDate'] != null ? DateTime.tryParse(raw['productionDate']) : null,
               imageBase64: raw['imageBase64'],
+              onlinePrice: raw['onlinePrice'],
             ),
           );
         }

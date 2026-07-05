@@ -228,6 +228,7 @@ app.post('/sync/product', async (req, res) => {
       label_addons: p.labelAddons || [],
       expiry_date: p.expiryDate ? p.expiryDate.substring(0, 10) : null,
       production_date: p.productionDate ? p.productionDate.substring(0, 10) : null,
+      online_price: p.onlinePrice,
     });
 
     if (upsertError) {
@@ -321,6 +322,7 @@ app.get('/sync/pull', async (req, res) => {
         expiryDate: p.expiry_date,
         productionDate: p.production_date,
         imageBase64: p.image_base64,
+        onlinePrice: p.online_price,
       })),
       members: (members || []).map((m) => ({
         id: m.id,

@@ -33,13 +33,14 @@ class ProductAdapter extends TypeAdapter<Product> {
       showPriceOnLabel: fields[13] as bool,
       labelVariant: fields[14] as String?,
       labelAddons: (fields[15] as List?)?.cast<String>(),
+      onlinePrice: fields[16] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,7 +72,9 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(14)
       ..write(obj.labelVariant)
       ..writeByte(15)
-      ..write(obj.labelAddons);
+      ..write(obj.labelAddons)
+      ..writeByte(16)
+      ..write(obj.onlinePrice);
   }
 
   @override
