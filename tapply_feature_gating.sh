@@ -1,7 +1,4 @@
-bash tapply_feature_gating.sh
-flutter clean
-flutter pub get
-flutter run -d web-server --web-port 8081 --releasecat > lib/services/db_service.dart << 'DBEOF'
+cat > lib/services/db_service.dart << 'DBEOF'
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
