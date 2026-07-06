@@ -97,6 +97,31 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!DbService.isProActive) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Member')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.lock_outline, size: 48, color: _navy),
+                const SizedBox(height: 16),
+                const Text('Member Accounts is a Pro Feature', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
+                const SizedBox(height: 8),
+                const Text(
+                  'Upgrade your plan from the dashboard to unlock member accounts and loyalty points.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Member')),
       body: Padding(

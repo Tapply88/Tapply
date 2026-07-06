@@ -54,11 +54,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final plan = DbService.businessPlan;
+    final isPro = DbService.isProActive;
+    final expires = DbService.planExpiresAt;
+    String planLabel;
+    if (plan == 'trial') {
+      planLabel = isPro ? 'Trial (Pro features)' : 'Trial Expired';
+    } else if (plan == 'pro') {
+      planLabel = 'Pro';
+    } else if (plan == 'multi_outlet') {
+      planLabel = 'Multi-Outlet';
+    } else {
+      planLabel = 'Starter';
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isPro ? Colors.green.shade50 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isPro ? Colors.green : Colors.orange),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Plan: $planLabel', style: TextStyle(fontWeight: FontWeight.bold, color: isPro ? Colors.green.shade800 : Colors.orange.shade800)),
+                    if (expires != null)
+                      Text(
+                        '${plan == 'trial' ? 'Trial ends' : 'Expires'} ${expires.day}/${expires.month}/${expires.year}',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                  ],
+                ),
+                Icon(isPro ? Icons.check_circle : Icons.error_outline, color: isPro ? Colors.green : Colors.orange),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           const Text('Cashier Tools', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),
           const SizedBox(height: 4),
           const Text(

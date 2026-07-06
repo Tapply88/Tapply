@@ -386,6 +386,8 @@ app.get('/sync/pull', async (req, res) => {
         pointsRedemptionValue: business.points_redemption_value,
         pointsRedemptionMultiple: business.points_redemption_multiple,
         pointsEarnRate: business.points_earn_rate,
+        plan: business.plan,
+        planExpiresAt: business.plan_expires_at,
         logoBase64: business.logo_base64,
       },
     });

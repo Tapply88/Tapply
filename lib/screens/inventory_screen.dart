@@ -66,6 +66,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _printLabel(Product p) {
+    if (!DbService.isProActive) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Label Printing is a Pro Feature', style: TextStyle(color: _navy)),
+          content: const Text('Upgrade your plan from the dashboard to unlock QR/barcode label printing.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          ],
+        ),
+      );
+      return;
+    }
     Navigator.push(context, MaterialPageRoute(builder: (_) => LabelGeneratorScreen(product: p)));
   }
 
