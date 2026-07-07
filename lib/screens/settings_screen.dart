@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/db_service.dart';
 import 'promo_screen.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 /// Tab "More" — sengaja dibikin minim. Pengaturan bisnis (profil, tax/service,
 /// diskon, rounding, PIN, print check, queue number, varian & tambahan)
@@ -76,9 +76,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: isPro ? Colors.green.shade50 : Colors.orange.shade50,
+              color: isPro ? const Color(0xFFEFECE5) : Colors.orange.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isPro ? Colors.green : Colors.orange),
+              border: Border.all(color: isPro ? const Color(0xFF623609) : Colors.orange),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -86,15 +86,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Plan: $planLabel', style: TextStyle(fontWeight: FontWeight.bold, color: isPro ? Colors.green.shade800 : Colors.orange.shade800)),
+                    Text('Plan: $planLabel', style: TextStyle(fontWeight: FontWeight.bold, color: isPro ? const Color(0xFF623609) : Colors.orange.shade800)),
                     if (expires != null)
                       Text(
                         '${plan == 'trial' ? 'Trial ends' : 'Expires'} ${expires.day}/${expires.month}/${expires.year}',
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        style: const TextStyle(fontSize: 11, color: const Color(0xFF623609)),
                       ),
                   ],
                 ),
-                Icon(isPro ? Icons.check_circle : Icons.error_outline, color: isPro ? Colors.green : Colors.orange),
+                Icon(isPro ? Icons.check_circle : Icons.error_outline, color: isPro ? const Color(0xFF623609) : Colors.orange),
               ],
             ),
           ),
@@ -105,7 +105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'Business settings (profile, tax/service, discount, rounding, PIN, variants & add-ons, etc.) '
             'are now managed only from the web dashboard, so they stay consistent across every device. '
             'Changes there sync here automatically.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
@@ -119,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 4),
           Text(
             DbService.isPaired ? 'Connected to dashboard.' : 'Not connected yet.',
-            style: TextStyle(fontSize: 12, color: DbService.isPaired ? Colors.green : Colors.red),
+            style: TextStyle(fontSize: 12, color: DbService.isPaired ? const Color(0xFF623609) : Colors.red),
           ),
           const SizedBox(height: 10),
           OutlinedButton(
@@ -129,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           if (DbService.pendingSyncCount > 0) ...[
             const SizedBox(height: 10),
-            Text('${DbService.pendingSyncCount} item(s) waiting to resend (automatic, no action needed).', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text('${DbService.pendingSyncCount} item(s) waiting to resend (automatic, no action needed).', style: const TextStyle(fontSize: 11, color: const Color(0xFF623609))),
           ],
         ],
       ),

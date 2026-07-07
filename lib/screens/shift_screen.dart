@@ -4,7 +4,7 @@ import '../models/shift.dart';
 import '../services/db_service.dart';
 import '../widgets/receipt_view.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 class ShiftScreen extends StatefulWidget {
   const ShiftScreen({super.key});
@@ -28,7 +28,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Cashier: ${DbService.currentCashierName.isEmpty ? "(not set)" : DbService.currentCashierName}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -94,7 +94,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                               : 'Short Rp${_currency.format(diff.abs()).replaceFirst("Rp ", "")}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: diff == 0 ? Colors.green : (diff > 0 ? Colors.blue : Colors.red),
+                        color: diff == 0 ? const Color(0xFF623609) : (diff > 0 ? Colors.blue : Colors.red),
                       ),
                     ),
                   ],
@@ -137,8 +137,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(shift.cashierName.isEmpty ? 'Cashier' : shift.cashierName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
-                  Text('Started: ${_dateFmt.format(shift.startTime)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  if (shift.endTime != null) Text('Ended: ${_dateFmt.format(shift.endTime!)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text('Started: ${_dateFmt.format(shift.startTime)}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
+                  if (shift.endTime != null) Text('Ended: ${_dateFmt.format(shift.endTime!)}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                   const Divider(height: 20),
                   _summaryRow('Starting Cash', shift.startingCash),
                   ...DbService.salesDuringShift(shift).entries.map((e) => _summaryRow(paymentMethodLabel(e.key), e.value)),
@@ -150,7 +150,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   ],
                   if (shift.note != null && shift.note!.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text('Note: ${shift.note}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text('Note: ${shift.note}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                   ],
                   const SizedBox(height: 16),
                   OutlinedButton(
@@ -200,7 +200,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   children: [
                     const Text('No Active Shift', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
                     const SizedBox(height: 8),
-                    const Text('Start a shift to record starting cash and settle up later.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const Text('Start a shift to record starting cash and settle up later.', style: TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                     const SizedBox(height: 12),
                     FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: _navy),
@@ -213,7 +213,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
             )
           else
             Card(
-              color: Colors.green.shade50,
+              color: const Color(0xFFEFECE5),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -221,9 +221,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.play_circle_fill, color: Colors.green, size: 20),
+                        const Icon(Icons.play_circle_fill, color: const Color(0xFF623609), size: 20),
                         const SizedBox(width: 6),
-                        const Text('Active Shift', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                        const Text('Active Shift', style: TextStyle(fontWeight: FontWeight.bold, color: const Color(0xFF623609))),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -247,7 +247,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
           const Text('Shift History', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
           const SizedBox(height: 8),
           if (history.isEmpty)
-            const Text('No completed shifts yet.', style: TextStyle(fontSize: 12, color: Colors.grey))
+            const Text('No completed shifts yet.', style: TextStyle(fontSize: 12, color: const Color(0xFF623609)))
           else
             ...history.map((s) {
               final expected = DbService.expectedCashForShift(s);
@@ -257,7 +257,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 onTap: () => _viewShiftDetail(s),
                 title: Text('${s.cashierName.isEmpty ? "Cashier" : s.cashierName} • ${_dateFmt.format(s.startTime)}'),
                 subtitle: Text(diff == 0 ? 'Spot on' : (diff > 0 ? 'Over ${_currency.format(diff)}' : 'Short ${_currency.format(diff.abs())}')),
-                trailing: Icon(Icons.circle, size: 10, color: diff == 0 ? Colors.green : (diff > 0 ? Colors.blue : Colors.red)),
+                trailing: Icon(Icons.circle, size: 10, color: diff == 0 ? const Color(0xFF623609) : (diff > 0 ? Colors.blue : Colors.red)),
               );
             }),
         ],

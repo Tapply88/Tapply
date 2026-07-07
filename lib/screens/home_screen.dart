@@ -9,8 +9,8 @@ import 'settings_screen.dart';
 import '../services/db_service.dart';
 import '../models/staff_member.dart';
 
-const _navy = Color(0xFF092762);
-const _grey = Color(0xFFCFCFCF);
+const _navy = Color(0xFF623609);
+const _grey = Color(0xFFD6CFC6);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const Text(
                 'Get the server URL & API code from the web dashboard → Settings → Sync.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
               ),
               const SizedBox(height: 12),
               TextField(controller: urlCtrl, decoration: const InputDecoration(labelText: 'URL Server Sync'), keyboardType: TextInputType.url),
@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text(
                   'Connect this device to your business dashboard first.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: const Color(0xFF623609)),
                 ),
                 const SizedBox(height: 20),
                 FilledButton(
@@ -241,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
               NavigationDestination(icon: Icon(Icons.point_of_sale), label: 'POS'),
               NavigationDestination(icon: Icon(Icons.card_membership), label: 'Member'),
               NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Inventory'),
-              NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Laporan'),
+              NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Report'),
               NavigationDestination(icon: Icon(Icons.settings), label: 'More'),
             ],
           ),

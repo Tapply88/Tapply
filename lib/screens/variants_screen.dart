@@ -4,7 +4,7 @@ import '../models/variation.dart';
 import '../models/addon.dart';
 import '../services/db_service.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 class VariantsScreen extends StatefulWidget {
   const VariantsScreen({super.key});
@@ -142,13 +142,13 @@ class _VariantsScreenState extends State<VariantsScreen> {
           ),
           const Text(
             'Pilihan wajib (pilih satu) yang muncul tiap produk ditambah ke keranjang, mis. Hangat/Dingin.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
           ),
           const SizedBox(height: 8),
           if (variations.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Belum ada varian.', style: TextStyle(color: Colors.grey)),
+              child: Text('Belum ada varian.', style: TextStyle(color: const Color(0xFF623609))),
             )
           else
             ...variations.map((v) => ListTile(
@@ -177,13 +177,13 @@ class _VariantsScreenState extends State<VariantsScreen> {
           ),
           const Text(
             'Pilihan opsional (boleh lebih dari satu), masing-masing bisa punya harga tambahan sendiri.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
           ),
           const SizedBox(height: 8),
           if (addons.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Belum ada tambahan.', style: TextStyle(color: Colors.grey)),
+              child: Text('Belum ada tambahan.', style: TextStyle(color: const Color(0xFF623609))),
             )
           else
             ...addons.map((a) => ListTile(

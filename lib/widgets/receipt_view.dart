@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/transaction.dart';
 import '../services/db_service.dart';
 
-const navyColor = Color(0xFF092762);
+const navyColor = Color(0xFF623609);
 
 String paymentMethodLabel(String code) {
   switch (code) {
@@ -69,9 +69,9 @@ class ReceiptView extends StatelessWidget {
                 ),
               Text(DbService.businessName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: navyColor)),
               if (DbService.businessAddress.isNotEmpty)
-                Text(DbService.businessAddress, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(DbService.businessAddress, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
               if (DbService.businessPhone.isNotEmpty)
-                Text(DbService.businessPhone, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(DbService.businessPhone, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
             ],
           ),
         ),
@@ -82,7 +82,7 @@ class ReceiptView extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: Column(
                 children: [
-                  const Text('QUEUE NUMBER', style: TextStyle(fontSize: 10, color: Colors.grey, letterSpacing: 1)),
+                  const Text('QUEUE NUMBER', style: TextStyle(fontSize: 10, color: const Color(0xFF623609), letterSpacing: 1)),
                   Text(tx.queueCode!, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: navyColor)),
                 ],
               ),
@@ -93,9 +93,9 @@ class ReceiptView extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: isVoided ? Colors.grey.shade300 : (isClosed ? Colors.green.shade50 : Colors.orange.shade50),
+              color: isVoided ? const Color(0xFF623609) : (isClosed ? const Color(0xFFEFECE5) : Colors.orange.shade50),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: isVoided ? Colors.grey.shade600 : (isClosed ? Colors.green : Colors.orange)),
+              border: Border.all(color: isVoided ? const Color(0xFF623609) : (isClosed ? const Color(0xFF623609) : Colors.orange)),
             ),
             child: Text(
               isVoided ? 'VOIDED' : (isClosed ? 'PAID — BILL CLOSED' : 'CHECK — UNPAID'),
@@ -103,21 +103,21 @@ class ReceiptView extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
-                color: isVoided ? Colors.grey.shade800 : (isClosed ? Colors.green.shade800 : Colors.orange.shade800),
+                color: isVoided ? const Color(0xFF623609) : (isClosed ? const Color(0xFF623609) : Colors.orange.shade800),
               ),
             ),
           ),
         ),
         const Divider(height: 24),
         if (tx.receiptNumber != null)
-          Text('Receipt No.: ${tx.receiptNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        Text('Order ID: ${tx.id.substring(0, tx.id.length >= 8 ? 8 : tx.id.length).toUpperCase()}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        Text(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt), style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        Text(tx.salesType, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Receipt No.: ${tx.receiptNumber}', style: const TextStyle(fontSize: 11, color: const Color(0xFF623609))),
+        Text('Order ID: ${tx.id.substring(0, tx.id.length >= 8 ? 8 : tx.id.length).toUpperCase()}', style: const TextStyle(fontSize: 11, color: const Color(0xFF623609))),
+        Text(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt), style: const TextStyle(fontSize: 11, color: const Color(0xFF623609))),
+        Text(tx.salesType, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
         if (customerName != null)
-          Text('Customer: $customerName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Customer: $customerName', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
         if (tx.cashierName != null && tx.cashierName!.isNotEmpty)
-          Text('Served by: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('Served by: ${tx.cashierName}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
         const SizedBox(height: 8),
         ...tx.items.map((item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 3),
@@ -130,7 +130,7 @@ class ReceiptView extends StatelessWidget {
                       children: [
                         Text('${item.productName} x${item.qty}', style: const TextStyle(fontSize: 13)),
                         if (item.note != null && item.note!.isNotEmpty)
-                          Text(item.note!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                          Text(item.note!, style: const TextStyle(fontSize: 11, color: const Color(0xFF623609))),
                       ],
                     ),
                   ),
@@ -159,12 +159,12 @@ class ReceiptView extends StatelessWidget {
           if (tx.changeAmount != null && tx.changeAmount! > 0) _row(currency, 'Change', tx.changeAmount!),
         ],
         const SizedBox(height: 20),
-        Center(child: Text(DbService.receiptFooterText, style: const TextStyle(fontSize: 12, color: Colors.grey))),
+        Center(child: Text(DbService.receiptFooterText, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609)))),
         const SizedBox(height: 16),
         Center(
           child: Column(
             children: [
-              const Text('powered by', style: TextStyle(fontSize: 9, color: Colors.grey)),
+              const Text('powered by', style: TextStyle(fontSize: 9, color: const Color(0xFF623609))),
               const SizedBox(height: 2),
               Image.asset('assets/logo.png', height: 20),
             ],

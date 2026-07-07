@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/member.dart';
 import '../services/db_service.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 class MembershipScreen extends StatefulWidget {
   const MembershipScreen({super.key});
@@ -113,7 +113,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 const Text(
                   'Upgrade your plan from the dashboard to unlock member accounts and loyalty points.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: const Color(0xFF623609)),
                 ),
               ],
             ),
@@ -132,7 +132,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
             const Text(
               'The full member list (all customer data) is available in the admin dashboard. '
               'Here the cashier can only search one number to check points or register a new member.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
             ),
             const SizedBox(height: 16),
             Row(
@@ -181,6 +181,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: _navy,
+        foregroundColor: const Color(0xFFD6CFC6),
         onPressed: _addMember,
         child: const Icon(Icons.person_add),
       ),

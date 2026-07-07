@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/promo.dart';
 import '../services/db_service.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 class PromoScreen extends StatefulWidget {
   const PromoScreen({super.key});
@@ -113,9 +113,9 @@ class _PromoScreenState extends State<PromoScreen> {
                       ),
                     ],
                   ),
-                  const Text('Leave dates blank to run indefinitely.', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  const Text('Leave dates blank to run indefinitely.', style: TextStyle(fontSize: 11, color: const Color(0xFF623609))),
                   const SizedBox(height: 12),
-                  const Text('WHEN DOES THIS APPLY', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const Text('WHEN DOES THIS APPLY', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Always (within the date range above)', style: TextStyle(fontSize: 13)),
@@ -162,7 +162,7 @@ class _PromoScreenState extends State<PromoScreen> {
                       ),
                     ),
                   const SizedBox(height: 12),
-                  const Text('APPLIES TO', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const Text('APPLIES TO', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Entire Receipt', style: TextStyle(fontSize: 13)),
@@ -191,12 +191,12 @@ class _PromoScreenState extends State<PromoScreen> {
                     const SizedBox(height: 4),
                     Text(
                       scope == 'item' ? 'Limit to specific products (optional, leave blank = applies to all products):' : 'Select products:',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       constraints: const BoxConstraints(maxHeight: 180),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(border: Border.all(color: const Color(0xFF623609)), borderRadius: BorderRadius.circular(8)),
                       child: ListView(
                         shrinkWrap: true,
                         children: DbService.products.values.map((p) {
@@ -297,7 +297,7 @@ class _PromoScreenState extends State<PromoScreen> {
         actions: [IconButton(onPressed: () => _editPromo(), icon: const Icon(Icons.add))],
       ),
       body: promos.isEmpty
-          ? const Center(child: Text('No promos yet. Tap + to create one.', style: TextStyle(color: Colors.grey)))
+          ? const Center(child: Text('No promos yet. Tap + to create one.', style: TextStyle(color: const Color(0xFF623609))))
           : ListView.builder(
               itemCount: promos.length,
               itemBuilder: (ctx, i) {
@@ -307,8 +307,8 @@ class _PromoScreenState extends State<PromoScreen> {
                     ? '${p.startDate != null ? _dateFmt.format(p.startDate!) : 'kapan aja'} — ${p.endDate != null ? _dateFmt.format(p.endDate!) : 'seterusnya'}'
                     : 'Runs indefinitely';
                 return ListTile(
-                  leading: Icon(Icons.local_offer, color: p.active ? _navy : Colors.grey),
-                  title: Text(p.name, style: TextStyle(color: p.active ? _navy : Colors.grey, fontWeight: FontWeight.bold)),
+                  leading: Icon(Icons.local_offer, color: p.active ? _navy : const Color(0xFF623609)),
+                  title: Text(p.name, style: TextStyle(color: p.active ? _navy : const Color(0xFF623609), fontWeight: FontWeight.bold)),
                   subtitle: Text(
                     'Discount $valueLabel${p.minPurchase > 0 ? ' • min. ${_currency.format(p.minPurchase)}' : ''}'
                     '${p.scope == 'product' ? ' • ${p.productIds.length} products (preset)' : p.scope == 'item' ? ' • per item${p.productIds.isNotEmpty ? ' (${p.productIds.length} products)' : ' (all products)'}' : ' • entire receipt'}'
@@ -319,7 +319,7 @@ class _PromoScreenState extends State<PromoScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!p.active) const Text('Inactive', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      if (!p.active) const Text('Inactive', style: TextStyle(fontSize: 10, color: const Color(0xFF623609))),
                       IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: () => _editPromo(existing: p)),
                       IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red), onPressed: () => _deletePromo(p)),
                     ],

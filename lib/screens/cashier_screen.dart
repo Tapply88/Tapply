@@ -12,8 +12,8 @@ import '../services/db_service.dart';
 import '../widgets/receipt_view.dart';
 import 'shift_screen.dart';
 
-const _navy = Color(0xFF092762);
-const _grey = Color(0xFFCFCFCF);
+const _navy = Color(0xFF623609);
+const _grey = Color(0xFFD6CFC6);
 
 class CartLine {
   final String signature;
@@ -92,7 +92,7 @@ class _CashierScreenState extends State<CashierScreen> {
           children: [
             const Text(
               'This name & email show on the receipt as "Served by". Simple version — not yet connected to account-based login on the dashboard.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
             ),
             const SizedBox(height: 12),
             TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Cashier Name')),
@@ -296,7 +296,7 @@ class _CashierScreenState extends State<CashierScreen> {
           children: [
             const Text(
               'Create an item not in the menu, e.g. service fee, special order, etc.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
             ),
             const SizedBox(height: 12),
             TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Item name')),
@@ -473,7 +473,7 @@ class _CashierScreenState extends State<CashierScreen> {
                     ),
                     const Divider(height: 24),
                     if (availableVariations.isNotEmpty) ...[
-                      const Text('VARIATION | CHOOSE ONE', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const Text('VARIATION | CHOOSE ONE', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -494,7 +494,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       const SizedBox(height: 16),
                     ],
                     if (availableAddons.isNotEmpty) ...[
-                      const Text('ADD-ONS | CHOOSE MULTIPLE', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const Text('ADD-ONS | CHOOSE MULTIPLE', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -521,7 +521,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    const Text('QUANTITY', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    const Text('QUANTITY', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -552,7 +552,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       const SizedBox(height: 12),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        activeThumbColor: Colors.green,
+                        activeThumbColor: const Color(0xFF623609),
                         title: Text(
                           itemPromo.name,
                           style: const TextStyle(fontSize: 13, color: _navy, fontWeight: FontWeight.bold),
@@ -561,7 +561,7 @@ class _CashierScreenState extends State<CashierScreen> {
                           itemPromo.discountType == 'fixed'
                               ? '-${_currency.format(itemPromo.value.round())} per item'
                               : '-${itemPromo.value.toStringAsFixed(0)}% per item',
-                          style: const TextStyle(fontSize: 11, color: Colors.green),
+                          style: const TextStyle(fontSize: 11, color: const Color(0xFF623609)),
                         ),
                         value: itemPromoOptIn,
                         onChanged: (v) => setDialogState(() => itemPromoOptIn = v),
@@ -629,7 +629,7 @@ class _CashierScreenState extends State<CashierScreen> {
                 Text('${member.name} has ${member.points} points.', style: const TextStyle(fontSize: 13)),
                 Text(
                   'Rate: ${_currency.format(DbService.pointsRedemptionValue)} per point. Redeem in multiples of $multiple. Max now: $maxRedeemable pts.',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: const TextStyle(fontSize: 11, color: const Color(0xFF623609)),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -641,7 +641,7 @@ class _CashierScreenState extends State<CashierScreen> {
                 ),
                 if (entered > 0) ...[
                   const SizedBox(height: 8),
-                  Text('= ${_currency.format(value)} discount', style: const TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),
+                  Text('= ${_currency.format(value)} discount', style: const TextStyle(fontSize: 13, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                 ],
                 if (maxRedeemable >= multiple)
                   Padding(
@@ -702,7 +702,7 @@ class _CashierScreenState extends State<CashierScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('FIND MEMBER (PHONE NO.)', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+            const Text('FIND MEMBER (PHONE NO.)', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -736,7 +736,7 @@ class _CashierScreenState extends State<CashierScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text('OR GUEST NAME (NON-MEMBER)', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+            const Text('OR GUEST NAME (NON-MEMBER)', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -801,7 +801,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       ),
                     ),
                   const SizedBox(height: 8),
-                  const Text('ONLINE ORDER', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                  const Text('ONLINE ORDER', style: TextStyle(fontSize: 11, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -927,7 +927,7 @@ class _CashierScreenState extends State<CashierScreen> {
               if (bills.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text('No saved bills yet.', style: TextStyle(color: Colors.grey)),
+                  child: Text('No saved bills yet.', style: TextStyle(color: const Color(0xFF623609))),
                 );
               }
               return SizedBox(
@@ -1127,17 +1127,17 @@ class _CashierScreenState extends State<CashierScreen> {
                     child: Column(
                       children: [
                         const Text('KITCHEN ORDER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _navy, letterSpacing: 1)),
-                        Text(DbService.businessName, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text(DbService.businessName, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                       ],
                     ),
                   ),
                   const Divider(height: 24),
-                  Text(DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now()), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now()), style: const TextStyle(fontSize: 11, color: const Color(0xFF623609))),
                   Text(_salesType, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _navy)),
                   if (_selectedMember != null)
-                    Text('Customer: ${_selectedMember!.name}', style: const TextStyle(fontSize: 12, color: Colors.grey))
+                    Text('Customer: ${_selectedMember!.name}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609)))
                   else if (_guestName != null)
-                    Text('Customer: $_guestName', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text('Customer: $_guestName', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                   const SizedBox(height: 12),
                   ..._cart.map((l) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1151,7 +1151,7 @@ class _CashierScreenState extends State<CashierScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(l.product.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _navy)),
-                                  Text(l.note, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                  Text(l.note, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                                 ],
                               ),
                             ),
@@ -1159,7 +1159,7 @@ class _CashierScreenState extends State<CashierScreen> {
                         ),
                       )),
                   const Divider(height: 20),
-                  const Center(child: Text('— For Kitchen, not a customer receipt —', style: TextStyle(fontSize: 10, color: Colors.grey))),
+                  const Center(child: Text('— For Kitchen, not a customer receipt —', style: TextStyle(fontSize: 10, color: const Color(0xFF623609)))),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
@@ -1241,7 +1241,7 @@ class _CashierScreenState extends State<CashierScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 56),
+                  const Icon(Icons.check_circle, color: const Color(0xFF623609), size: 56),
                   const SizedBox(height: 8),
                   const Center(child: Text('Payment Successful!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: _navy))),
                   const SizedBox(height: 4),
@@ -1359,7 +1359,7 @@ class _CashierScreenState extends State<CashierScreen> {
             const Text(
               'Ask the customer to scan the QRIS at the counter, then confirm once payment is received.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+              style: TextStyle(fontSize: 13, color: const Color(0xFF623609)),
             ),
           ],
         ),
@@ -1636,7 +1636,7 @@ class _CashierScreenState extends State<CashierScreen> {
                           border: Border.all(color: outOfStock ? Colors.red : _navy, width: 0.5),
                         ),
                         child: Text(
-                          outOfStock ? 'Habis' : 'Stok ${p.stock}',
+                          outOfStock ? 'Out of Stock' : 'Stock ${p.stock}',
                           style: TextStyle(fontSize: 10, color: outOfStock ? Colors.red.shade800 : _navy),
                         ),
                       ),
@@ -1657,8 +1657,8 @@ class _CashierScreenState extends State<CashierScreen> {
                     Text(p.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: outOfStock ? Colors.grey : _navy)),
-                    Text(_currency.format(_basePriceFor(p)), style: TextStyle(fontSize: 12, color: outOfStock ? Colors.grey : _navy)),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: outOfStock ? const Color(0xFF623609) : _navy)),
+                    Text(_currency.format(_basePriceFor(p)), style: TextStyle(fontSize: 12, color: outOfStock ? const Color(0xFF623609) : _navy)),
                   ],
                 ),
               ),
@@ -1739,18 +1739,18 @@ class _CashierScreenState extends State<CashierScreen> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: openShift != null ? Colors.green.shade50 : Colors.white,
+                      color: openShift != null ? const Color(0xFFEFECE5) : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: openShift != null ? Colors.green : _navy, width: 0.5),
+                      border: Border.all(color: openShift != null ? const Color(0xFF623609) : _navy, width: 0.5),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.point_of_sale, size: 16, color: openShift != null ? Colors.green.shade800 : _navy),
+                        Icon(Icons.point_of_sale, size: 16, color: openShift != null ? const Color(0xFF623609) : _navy),
                         const SizedBox(width: 6),
                         Text(
                           openShift != null ? 'Shift Active' : 'Start Shift',
-                          style: TextStyle(fontSize: 12, color: openShift != null ? Colors.green.shade800 : _navy, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 12, color: openShift != null ? const Color(0xFF623609) : _navy, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -1896,7 +1896,7 @@ class _CashierScreenState extends State<CashierScreen> {
                       onTap: _openRedeemPointsDialog,
                       child: Container(
                         width: double.infinity,
-                        color: _pointsToRedeem > 0 ? Colors.green.shade50 : Colors.white,
+                        color: _pointsToRedeem > 0 ? const Color(0xFFEFECE5) : Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1908,10 +1908,10 @@ class _CashierScreenState extends State<CashierScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: _pointsToRedeem > 0 ? Colors.green.shade800 : _navy,
+                                color: _pointsToRedeem > 0 ? const Color(0xFF623609) : _navy,
                               ),
                             ),
-                            Icon(Icons.card_giftcard, size: 16, color: _pointsToRedeem > 0 ? Colors.green.shade800 : _navy),
+                            Icon(Icons.card_giftcard, size: 16, color: _pointsToRedeem > 0 ? const Color(0xFF623609) : _navy),
                           ],
                         ),
                       ),
@@ -1933,7 +1933,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   const Divider(height: 1),
                   Expanded(
                     child: _cart.isEmpty
-                        ? const Center(child: Text('No items yet', style: TextStyle(color: Colors.grey)))
+                        ? const Center(child: Text('No items yet', style: TextStyle(color: const Color(0xFF623609))))
                         : ListView.builder(
                             itemCount: _cart.length,
                             itemBuilder: (ctx, i) {
@@ -1944,9 +1944,9 @@ class _CashierScreenState extends State<CashierScreen> {
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(l.note, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                    Text(l.note, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                                     if (promoNote != null)
-                                      Text(promoNote, style: const TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
+                                      Text(promoNote, style: const TextStyle(fontSize: 12, color: const Color(0xFF623609), fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                                 trailing: Row(
@@ -1957,7 +1957,7 @@ class _CashierScreenState extends State<CashierScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                         Text(_currency.format(l.subtotal), style: const TextStyle(color: _navy)),
-                                        Text('x${l.qty}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                        Text('x${l.qty}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
                                       ],
                                     ),
                                     IconButton(
@@ -2009,7 +2009,7 @@ class _CashierScreenState extends State<CashierScreen> {
                           onTap: _printKitchenOrder,
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            color: const Color(0xFFE0E0E0),
+                            color: const Color(0xFFEFECE5),
                             alignment: Alignment.center,
                             child: Text('Kitchen Order', style: const TextStyle(color: _navy, fontSize: 12)),
                           ),
@@ -2034,7 +2034,7 @@ class _CashierScreenState extends State<CashierScreen> {
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 18),
-                      color: _cart.isEmpty ? Colors.grey : _navy,
+                      color: _cart.isEmpty ? const Color(0xFF623609) : _navy,
                       alignment: Alignment.center,
                       child: Text(
                         '${'Charge'} ${_currency.format(_grandTotal)}',
@@ -2063,9 +2063,9 @@ class _CashierScreenState extends State<CashierScreen> {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: applied ? Colors.green.shade50 : (pending ? Colors.amber.shade50 : Colors.grey.shade100),
+          color: applied ? const Color(0xFFEFECE5) : (pending ? Colors.amber.shade50 : const Color(0xFF623609)),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: applied ? Colors.green : (pending ? Colors.amber.shade700 : Colors.grey)),
+          border: Border.all(color: applied ? const Color(0xFF623609) : (pending ? Colors.amber.shade700 : const Color(0xFF623609))),
         ),
         child: Row(
           children: [

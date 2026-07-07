@@ -11,8 +11,8 @@ Future<void> main() async {
 class TapplyApp extends StatelessWidget {
   const TapplyApp({super.key});
 
-  static const backgroundColor = Color(0xFFCFCFCF);
-  static const fontColor = Color(0xFF092762);
+  static const backgroundColor = Color(0xFFD6CFC6);
+  static const fontColor = Color(0xFF623609);
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +42,7 @@ class TapplyApp extends StatelessWidget {
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: backgroundColor,
+          indicatorColor: fontColor.withValues(alpha: 0.12),
           labelTextStyle: WidgetStateProperty.all(
             const TextStyle(color: fontColor, fontSize: 12),
           ),

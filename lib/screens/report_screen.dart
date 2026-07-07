@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/db_service.dart';
 import '../widgets/receipt_view.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -120,7 +120,7 @@ class _ReportScreenState extends State<ReportScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               Card(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: const Color(0xFFEFECE5),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -157,7 +157,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 final byMethod = DbService.salesByPaymentMethod();
                 final sorted = byMethod.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
                 if (sorted.isEmpty) {
-                  return [const Text('No transactions yet.', style: TextStyle(fontSize: 12, color: Colors.grey))];
+                  return [const Text('No transactions yet.', style: TextStyle(fontSize: 12, color: const Color(0xFF623609)))];
                 }
                 return sorted
                     .map((e) => ListTile(
@@ -178,7 +178,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   )),
               const SizedBox(height: 20),
               const Text('Transaction History', style: TextStyle(fontWeight: FontWeight.bold)),
-              const Text('Tap to view full receipt', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              const Text('Tap to view full receipt', style: TextStyle(fontSize: 11, color: const Color(0xFF623609))),
               const SizedBox(height: 8),
               ...allTx.take(100).map((t) {
                 final voided = t.status == 'void';
@@ -187,7 +187,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   onTap: () => _showReceipt(context, t),
                   title: Text(
                     currency.format(t.total),
-                    style: voided ? const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey) : null,
+                    style: voided ? const TextStyle(decoration: TextDecoration.lineThrough, color: const Color(0xFF623609)) : null,
                   ),
                   subtitle: Text('${paymentMethodLabel(t.paymentMethod)} • ${DateFormat('dd MMM yyyy, HH:mm').format(t.createdAt)}'),
                   trailing: Text(

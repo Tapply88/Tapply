@@ -159,9 +159,9 @@
     },
     {
       "name": "equatable",
-      "rootUri": "file:///root/.pub-cache/hosted/pub.dev/equatable-2.0.8",
+      "rootUri": "file:///root/.pub-cache/hosted/pub.dev/equatable-2.1.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "fake_async",

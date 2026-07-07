@@ -6,7 +6,7 @@ import 'dart:convert';
 import '../models/product.dart';
 import '../services/db_service.dart';
 
-const _navy = Color(0xFF092762);
+const _navy = Color(0xFF623609);
 
 /// Inventory di app HANYA buat urus stock. Nama, harga, kategori, foto, SKU,
 /// varian/tambahan, dan ukuran label semuanya dikelola dari dashboard web —
@@ -34,7 +34,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (p.sku.isNotEmpty) Text('SKU: ${p.sku}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            if (p.sku.isNotEmpty) Text('SKU: ${p.sku}', style: const TextStyle(fontSize: 12, color: const Color(0xFF623609))),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -45,7 +45,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             const SizedBox(height: 8),
             const Text(
               'Product name, price, category, photo, SKU, and variants are managed from the web dashboard.',
-              style: TextStyle(fontSize: 11, color: Colors.grey),
+              style: TextStyle(fontSize: 11, color: const Color(0xFF623609)),
             ),
           ],
         ),
@@ -119,7 +119,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
           Expanded(
             child: items.isEmpty
-                ? const Center(child: Text('No matching products.', style: TextStyle(color: Colors.grey)))
+                ? const Center(child: Text('No matching products.', style: TextStyle(color: const Color(0xFF623609))))
                 : ListView.builder(
                     itemCount: items.length,
                     itemBuilder: (ctx, i) {
@@ -132,7 +132,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           height: 44,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(6),
-                            color: const Color(0xFFCFCFCF),
+                            color: const Color(0xFFD6CFC6),
                           ),
                           child: p.imageBase64 != null
                               ? ClipRRect(
@@ -153,14 +153,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: low ? Colors.red.shade50 : Colors.green.shade50,
+                                color: low ? Colors.red.shade50 : const Color(0xFFEFECE5),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: low ? Colors.red : Colors.green),
+                                border: Border.all(color: low ? Colors.red : const Color(0xFF623609)),
                               ),
                               child: Text(
                                 'Stock: ${p.stock}',
                                 style: TextStyle(
-                                  color: low ? Colors.red.shade800 : Colors.green.shade800,
+                                  color: low ? Colors.red.shade800 : const Color(0xFF623609),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -265,7 +265,7 @@ class _LabelGeneratorScreenState extends State<LabelGeneratorScreen> {
               child: Text(
                 'Label size, SKU, variant/add-ons, and price visibility are set from the dashboard. '
                 'Here you can only set batch dates and quantity.',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                style: TextStyle(fontSize: 11, color: const Color(0xFF623609)),
               ),
             ),
             const SizedBox(height: 16),
@@ -317,7 +317,7 @@ class _LabelGeneratorScreenState extends State<LabelGeneratorScreen> {
             const SizedBox(height: 20),
             if (_generatedNumbers.isEmpty)
               const Expanded(
-                child: Center(child: Text('Set the options above, then tap Generate.', style: TextStyle(color: Colors.grey))),
+                child: Center(child: Text('Set the options above, then tap Generate.', style: TextStyle(color: const Color(0xFF623609)))),
               )
             else
               Expanded(
@@ -338,7 +338,7 @@ class _LabelGeneratorScreenState extends State<LabelGeneratorScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Preview — for physical printing: paper size ${p.labelSize}, margin None, scale 100%.',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      style: const TextStyle(fontSize: 11, color: const Color(0xFF623609)),
                     ),
                   ],
                 ),
@@ -359,7 +359,7 @@ class _LabelGeneratorScreenState extends State<LabelGeneratorScreen> {
     return Container(
       width: size.width,
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFF623609)), borderRadius: BorderRadius.circular(6)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,7 +383,7 @@ class _LabelGeneratorScreenState extends State<LabelGeneratorScreen> {
                         if (p.volume != null && p.volume!.isNotEmpty) p.volume!,
                         if (p.sku.isNotEmpty) p.sku,
                       ].join(' · '),
-                      style: const TextStyle(fontSize: 9, color: Colors.grey),
+                      style: const TextStyle(fontSize: 9, color: const Color(0xFF623609)),
                     ),
                     if (variantLine.isNotEmpty)
                       Text(variantLine, style: const TextStyle(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w600)),
