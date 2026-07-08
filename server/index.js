@@ -298,13 +298,15 @@ app.get('/sync/pull', async (req, res) => {
     if (businessError || !businessFull) return res.status(401).json({ error: 'API key gak valid' });
     const business = businessFull;
 
-    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }, { data: staff }] = await Promise.all([
+    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }, { data: staff }, { data: ingredients }, { data: recipeItems }] = await Promise.all([
       supabaseAdmin.from('products').select('*').eq('business_id', business.id),
       supabaseAdmin.from('members').select('*').eq('business_id', business.id),
       supabaseAdmin.from('promos').select('*').eq('business_id', business.id),
       supabaseAdmin.from('variations').select('*').eq('business_id', business.id),
       supabaseAdmin.from('addons').select('*').eq('business_id', business.id),
       supabaseAdmin.from('staff').select('*').eq('business_id', business.id).eq('active', true),
+      supabaseAdmin.from('ingredients').select('*').eq('business_id', business.id),
+      supabaseAdmin.from('recipe_items').select('*').eq('business_id', business.id),
     ]);
 
     res.json({
@@ -368,6 +370,19 @@ app.get('/sync/pull', async (req, res) => {
         role: s.role,
         pin: s.pin,
       })),
+      ingredients: (ingredients || []).map((i) => ({
+        id: i.id,
+        name: i.name,
+        unit: i.unit,
+        stock: i.stock,
+        lowStockThreshold: i.low_stock_threshold,
+      })),
+      recipeItems: (recipeItems || []).map((r) => ({
+        id: r.id,
+        productId: r.product_id,
+        ingredientId: r.ingredient_id,
+        quantity: r.quantity,
+      })),
       business: {
         name: business.name,
         address: business.address,
@@ -391,6 +406,38 @@ app.get('/sync/pull', async (req, res) => {
         logoBase64: business.logo_base64,
       },
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Deduct ingredient stock (dipanggil app pas transaksi produk yang punya resep) ----
+app.post('/sync/ingredient-deduct', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const deductions = req.body.deductions || []; // [{ ingredientId, amount }]
+    for (const d of deductions) {
+      const { data: ing } = await supabaseAdmin
+        .from('ingredients')
+        .select('stock')
+        .eq('id', d.ingredientId)
+        .eq('business_id', business.id)
+        .single();
+      if (ing) {
+        const newStock = (ing.stock || 0) - (d.amount || 0);
+        await supabaseAdmin.from('ingredients').update({ stock: newStock }).eq('id', d.ingredientId);
+      }
+    }
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
