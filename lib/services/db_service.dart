@@ -1005,6 +1005,7 @@ class DbService {
         await staffBoxRef.put(id, StaffMember(id: id, name: raw['name'], role: raw['role'] ?? 'cashier', pin: raw['pin'] ?? ''));
       }
 
+      int ingredientCount = 0;
       for (final raw in (data['ingredients'] as List? ?? [])) {
         final id = raw['id'] as String;
         final existing = ingredientsBoxRef.get(id);
@@ -1026,7 +1027,9 @@ class DbService {
             ),
           );
         }
+        ingredientCount++;
       }
+      int recipeCount = 0;
       recipeItemsBoxRef.clear();
       for (final raw in (data['recipeItems'] as List? ?? [])) {
         final id = raw['id'] as String;
@@ -1039,6 +1042,7 @@ class DbService {
             quantity: (raw['quantity'] as num?)?.toDouble() ?? 0,
           ),
         );
+        recipeCount++;
       }
       final business = data['business'] as Map<String, dynamic>?;
       if (business != null) {
@@ -1073,7 +1077,7 @@ class DbService {
 
       return (
         success: true,
-        message: 'Berhasil: $productCount produk, $memberCount member, $promoCount promo.',
+        message: 'Berhasil: $productCount produk, $memberCount member, $promoCount promo, $ingredientCount bahan, $recipeCount resep.',
       );
     } catch (e) {
       return (success: false, message: 'Gagal narik data — cek koneksi internet.');

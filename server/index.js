@@ -414,6 +414,7 @@ app.get('/sync/pull', async (req, res) => {
 
 // ---- Deduct ingredient stock (dipanggil app pas transaksi produk yang punya resep) ----
 app.post('/sync/ingredient-deduct', async (req, res) => {
+  console.log('INGREDIENT-DEDUCT CALLED, body:', JSON.stringify(req.body));
   try {
     const apiKey = req.headers['x-api-key'];
     if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });

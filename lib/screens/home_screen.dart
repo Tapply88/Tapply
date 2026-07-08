@@ -92,7 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
       await DbService.setSyncServerUrl(urlCtrl.text.trim());
       await DbService.setSyncApiKey(keyCtrl.text.trim());
       if (mounted) setState(() {});
-      await DbService.pullFromCloud();
+      final result = await DbService.pullFromCloud();
+      // ignore: avoid_print
+      print('PULL DEBUG: success=${result.success} message=${result.message}');
       if (mounted) setState(() {});
     }
   }
