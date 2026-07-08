@@ -12,6 +12,8 @@ import '../models/addon.dart';
 import '../models/shift.dart';
 import '../models/held_bill.dart';
 import '../models/staff_member.dart';
+import '../models/ingredient.dart';
+import '../models/recipe_item.dart';
 
 class DbService {
   static const productBox = 'products';
@@ -25,6 +27,8 @@ class DbService {
   static const syncQueueBox = 'syncQueue';
   static const heldBillBox = 'heldBills';
   static const staffBox = 'staff';
+  static const ingredientBox = 'ingredients';
+  static const recipeItemBox = 'recipeItems';
   static final _uuid = const Uuid();
 
   static Future<void> init() async {
@@ -40,6 +44,8 @@ class DbService {
     Hive.registerAdapter(HeldBillItemAdapter());
     Hive.registerAdapter(HeldBillAdapter());
     Hive.registerAdapter(StaffMemberAdapter());
+    Hive.registerAdapter(IngredientAdapter());
+    Hive.registerAdapter(RecipeItemAdapter());
 
     await Hive.openBox<Product>(productBox);
     await Hive.openBox<Member>(memberBox);
@@ -51,6 +57,8 @@ class DbService {
     await Hive.openBox<Shift>(shiftBox);
     await Hive.openBox<HeldBill>(heldBillBox);
     await Hive.openBox<StaffMember>(staffBox);
+    await Hive.openBox<Ingredient>(ingredientBox);
+    await Hive.openBox<RecipeItem>(recipeItemBox);
     await Hive.openBox(syncQueueBox);
 
     await _seedProductsIfEmpty();
@@ -249,6 +257,40 @@ class DbService {
       if (response.statusCode != 200) await _queueForRetry('/sync/product', payload);
     } catch (_) {
       await _queueForRetry('/sync/product', payload);
+    }
+  }
+
+  static Future<void> deductIngredientsForSale(String productId, int qtySold) async {
+    final recipe = recipeItemsForProduct(productId);
+    if (recipe.isEmpty) return;
+    final deductions = <Map<String, dynamic>>[];
+    for (final r in recipe) {
+      final ing = ingredientsBoxRef.get(r.ingredientId);
+      if (ing == null) continue;
+      final amount = r.quantity * qtySold;
+      ing.stock = ing.stock - amount;
+      await ing.save();
+      deductions.add({'ingredientId': r.ingredientId, 'amount': amount});
+    }
+    if (deductions.isNotEmpty) {
+      _pushIngredientDeductions(deductions);
+    }
+  }
+
+  static Future<void> _pushIngredientDeductions(List<Map<String, dynamic>> deductions) async {
+    if (!syncEnabled || syncServerUrl.isEmpty || syncApiKey.isEmpty) return;
+    final payload = {'deductions': deductions};
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$syncServerUrl/sync/ingredient-deduct'),
+            headers: {'Content-Type': 'application/json', 'x-api-key': syncApiKey},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) await _queueForRetry('/sync/ingredient-deduct', payload);
+    } catch (_) {
+      await _queueForRetry('/sync/ingredient-deduct', payload);
     }
   }
 
@@ -725,6 +767,12 @@ class DbService {
   static Box<StaffMember> get staffBoxRef => Hive.box<StaffMember>(staffBox);
   static List<StaffMember> get staffList => staffBoxRef.values.toList()..sort((a, b) => a.name.compareTo(b.name));
 
+  static Box<Ingredient> get ingredientsBoxRef => Hive.box<Ingredient>(ingredientBox);
+  static List<Ingredient> get ingredientsList => ingredientsBoxRef.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  static Box<RecipeItem> get recipeItemsBoxRef => Hive.box<RecipeItem>(recipeItemBox);
+  static List<RecipeItem> recipeItemsForProduct(String productId) =>
+      recipeItemsBoxRef.values.where((r) => r.productId == productId).toList();
+  static bool productHasRecipe(String productId) => recipeItemsForProduct(productId).isNotEmpty;
   static StaffMember? findStaffByPin(String pin) {
     final hashed = hashPin(pin);
     try {
@@ -957,6 +1005,41 @@ class DbService {
         await staffBoxRef.put(id, StaffMember(id: id, name: raw['name'], role: raw['role'] ?? 'cashier', pin: raw['pin'] ?? ''));
       }
 
+      for (final raw in (data['ingredients'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        final existing = ingredientsBoxRef.get(id);
+        if (existing != null) {
+          existing.name = raw['name'];
+          existing.unit = raw['unit'] ?? existing.unit;
+          existing.stock = (raw['stock'] as num?)?.toDouble() ?? existing.stock;
+          existing.lowStockThreshold = (raw['lowStockThreshold'] as num?)?.toDouble() ?? existing.lowStockThreshold;
+          existing.save();
+        } else {
+          ingredientsBoxRef.put(
+            id,
+            Ingredient(
+              id: id,
+              name: raw['name'],
+              unit: raw['unit'] ?? 'gram',
+              stock: (raw['stock'] as num?)?.toDouble() ?? 0,
+              lowStockThreshold: (raw['lowStockThreshold'] as num?)?.toDouble() ?? 0,
+            ),
+          );
+        }
+      }
+      recipeItemsBoxRef.clear();
+      for (final raw in (data['recipeItems'] as List? ?? [])) {
+        final id = raw['id'] as String;
+        recipeItemsBoxRef.put(
+          id,
+          RecipeItem(
+            id: id,
+            productId: raw['productId'],
+            ingredientId: raw['ingredientId'],
+            quantity: (raw['quantity'] as num?)?.toDouble() ?? 0,
+          ),
+        );
+      }
       final business = data['business'] as Map<String, dynamic>?;
       if (business != null) {
         await updateBusinessProfile(
@@ -1103,7 +1186,11 @@ class DbService {
 
     if (status == 'paid') {
       for (final item in items) {
-        await adjustStock(item.productId, -item.qty);
+        if (productHasRecipe(item.productId)) {
+          await deductIngredientsForSale(item.productId, item.qty);
+        } else {
+          await adjustStock(item.productId, -item.qty);
+        }
       }
     }
 
