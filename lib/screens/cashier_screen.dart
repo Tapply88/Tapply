@@ -1380,8 +1380,8 @@ class _CashierScreenState extends State<CashierScreen> {
     );
   }
 
-  Future<void> _openPaymentSheet() async {
-    if (_cart.isEmpty) return;
+  Future<bool> _openPaymentSheet() async {
+    if (_cart.isEmpty) return false;
     final total = _grandTotal;
     final quickAmounts = <int>{
       total,
@@ -1391,7 +1391,7 @@ class _CashierScreenState extends State<CashierScreen> {
       ..sort();
     _customCashController.clear();
 
-    await showModalBottomSheet(
+    final result = await showModalBottomSheet<({String method, int? cashReceived, int? changeAmount})?>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -1421,8 +1421,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   return OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () {
-                      Navigator.pop(ctx);
-                      _checkout('cash', cashReceived: a, changeAmount: a - total);
+                      Navigator.pop(ctx, (method: 'cash', cashReceived: a, changeAmount: a - total));
                     },
                     child: Text(_currency.format(a)),
                   );
@@ -1454,13 +1453,7 @@ class _CashierScreenState extends State<CashierScreen> {
                         return;
                       }
                       final change = amount - total;
-                      Navigator.pop(ctx);
-                      _checkout('cash', cashReceived: amount, changeAmount: change);
-                      if (change > 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Kembalian: ${_currency.format(change)}')),
-                        );
-                      }
+                      Navigator.pop(ctx, (method: 'cash', cashReceived: amount, changeAmount: change));
                     },
                     child: const Text('Pay'),
                   ),
@@ -1488,8 +1481,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   return OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () {
-                      Navigator.pop(ctx);
-                      _checkout('qris_midtrans');
+                      Navigator.pop(ctx, (method: 'qris_midtrans', cashReceived: null, changeAmount: null));
                     },
                     child: Text(w),
                   );
@@ -1505,8 +1497,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   return OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () {
-                      Navigator.pop(ctx);
-                      _checkout('edc_$b');
+                      Navigator.pop(ctx, (method: 'edc_$b', cashReceived: null, changeAmount: null));
                     },
                     child: Text(b),
                   );
@@ -1522,8 +1513,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   return OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () {
-                      Navigator.pop(ctx);
-                      _checkout(p.toLowerCase());
+                      Navigator.pop(ctx, (method: p.toLowerCase(), cashReceived: null, changeAmount: null));
                     },
                     child: Text(p),
                   );
@@ -1539,8 +1529,7 @@ class _CashierScreenState extends State<CashierScreen> {
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
                     onPressed: () {
-                      Navigator.pop(ctx);
-                      _checkout('bank_transfer');
+                      Navigator.pop(ctx, (method: 'bank_transfer', cashReceived: null, changeAmount: null));
                     },
                     child: const Text('Bank Transfer'),
                   ),
@@ -1582,22 +1571,42 @@ class _CashierScreenState extends State<CashierScreen> {
         ),
       ),
     );
+
+    if (result == null) return false;
+    await _checkout(result.method, cashReceived: result.cashReceived, changeAmount: result.changeAmount);
+    if (result.method == 'cash' && (result.changeAmount ?? 0) > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Kembalian: ${_currency.format(result.changeAmount!)}')),
+      );
+    }
+    return true;
   }
 
-
-  Future<void> _startSplitPayment(List<List<CartLine>> groups) async {
-    final queue = List<List<CartLine>>.from(groups);
+  Future<void> _startSplitPayment(List<List<CartLine>> groups, {List<String>? names}) async {
+    final entries = <({String name, List<CartLine> items})>[];
+    for (var i = 0; i < groups.length; i++) {
+      entries.add((name: (names != null && i < names.length) ? names[i] : 'Person ${i + 1}', items: groups[i]));
+    }
+    final queue = List.of(entries);
     while (queue.isNotEmpty) {
-      final currentGroupItems = queue.removeAt(0);
+      final current = queue.removeAt(0);
       setState(() {
         _cart
           ..clear()
-          ..addAll(currentGroupItems);
+          ..addAll(current.items);
       });
-      await _openPaymentSheet();
-      if (_cart.isNotEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Payment for: ${current.name}'), duration: const Duration(seconds: 3)),
+        );
+      }
+      final paid = await _openPaymentSheet();
+      if (!paid) {
         setState(() {
-          _cart.addAll(queue.expand((g) => g));
+          _cart
+            ..clear()
+            ..addAll(current.items)
+            ..addAll(queue.expand((e) => e.items));
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1607,16 +1616,20 @@ class _CashierScreenState extends State<CashierScreen> {
         return;
       }
     }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All split payments complete!')),
+      );
+    }
   }
 
   Future<void> _openSplitBillDialog() async {
     if (_cart.isEmpty) return;
-    final Map<String, String?> assignments = {for (final l in _cart) l.signature: l.splitGroup};
     List<String> people = [];
-    for (final v in assignments.values) {
-      if (v != null && !people.contains(v)) people.add(v);
-    }
-    if (people.isEmpty) people = ['A', 'B'];
+    final Map<String, Map<String, int>> allocations = {
+      for (final l in _cart) l.signature: <String, int>{},
+    };
+    final nameCtrl = TextEditingController();
     String? errorText;
 
     await showDialog<void>(
@@ -1624,9 +1637,15 @@ class _CashierScreenState extends State<CashierScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           void addPerson() {
-            final nextLetter = String.fromCharCode('A'.codeUnitAt(0) + people.length);
-            setDialogState(() => people.add(nextLetter));
+            final name = nameCtrl.text.trim();
+            if (name.isEmpty || people.contains(name)) return;
+            setDialogState(() {
+              people.add(name);
+              nameCtrl.clear();
+            });
           }
+
+          int allocatedFor(CartLine line) => allocations[line.signature]!.values.fold(0, (a, b) => a + b);
 
           return AlertDialog(
             title: const Text('Split Bill', style: TextStyle(color: _navy)),
@@ -1637,41 +1656,91 @@ class _CashierScreenState extends State<CashierScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Tap a letter to assign each item to a person.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    const SizedBox(height: 12),
-                    ..._cart.map((line) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text('${line.product.name} x${line.qty}', style: const TextStyle(fontSize: 13)),
-                            ),
-                            Wrap(
-                              spacing: 6,
-                              children: people.map((p) {
-                                final selected = assignments[line.signature] == p;
-                                return ChoiceChip(
-                                  label: Text(p, style: TextStyle(color: selected ? Colors.white : _navy)),
-                                  selected: selected,
-                                  selectedColor: _navy,
-                                  backgroundColor: Colors.transparent,
-                                  side: const BorderSide(color: _navy),
-                                  onSelected: (_) {
-                                    setDialogState(() => assignments[line.signature] = p);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ],
+                    const Text('Add each person, then allocate item quantities to them.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: nameCtrl,
+                            decoration: const InputDecoration(labelText: 'Person name', isDense: true),
+                            onSubmitted: (_) => addPerson(),
+                          ),
                         ),
-                      );
-                    }),
-                    TextButton.icon(
-                      onPressed: addPerson,
-                      icon: const Icon(Icons.person_add_alt, size: 16, color: _navy),
-                      label: const Text('Add Person', style: TextStyle(color: _navy)),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: _navy),
+                          onPressed: addPerson,
+                          child: const Text('Add'),
+                        ),
+                      ],
                     ),
+                    if (people.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 6,
+                        children: people
+                            .map((p) => Chip(
+                                  label: Text(p, style: const TextStyle(fontSize: 12)),
+                                  backgroundColor: const Color(0xFFEFECE5),
+                                  deleteIcon: const Icon(Icons.close, size: 14),
+                                  onDeleted: () {
+                                    setDialogState(() {
+                                      people.remove(p);
+                                      for (final line in _cart) {
+                                        allocations[line.signature]!.remove(p);
+                                      }
+                                    });
+                                  },
+                                ))
+                            .toList(),
+                      ),
+                    ],
+                    const Divider(height: 28),
+                    if (people.length < 2)
+                      const Text('Add at least 2 people to split the bill.', style: TextStyle(fontSize: 12, color: Colors.grey))
+                    else
+                      ..._cart.map((line) {
+                        final allocated = allocatedFor(line);
+                        final remaining = line.qty - allocated;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${line.product.name} x${line.qty}${remaining != 0 ? ' — $remaining unassigned' : ''}',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: remaining != 0 ? Colors.red : _navy),
+                              ),
+                              const SizedBox(height: 6),
+                              ...people.map((p) {
+                                final count = allocations[line.signature]![p] ?? 0;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    children: [
+                                      Expanded(child: Text(p, style: const TextStyle(fontSize: 12))),
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_circle_outline, size: 20, color: _navy),
+                                        onPressed: count <= 0
+                                            ? null
+                                            : () => setDialogState(() => allocations[line.signature]![p] = count - 1),
+                                      ),
+                                      SizedBox(width: 24, child: Text('$count', textAlign: TextAlign.center)),
+                                      IconButton(
+                                        icon: const Icon(Icons.add_circle_outline, size: 20, color: _navy),
+                                        onPressed: remaining <= 0
+                                            ? null
+                                            : () => setDialogState(() => allocations[line.signature]![p] = count + 1),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      }),
                     if (errorText != null) ...[
                       const SizedBox(height: 8),
                       Text(errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
@@ -1685,25 +1754,38 @@ class _CashierScreenState extends State<CashierScreen> {
               FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: _navy),
                 onPressed: () {
-                  final unassigned = assignments.values.where((v) => v == null).length;
-                  final distinctUsed = assignments.values.whereType<String>().toSet().length;
-                  if (unassigned > 0) {
-                    setDialogState(() => errorText = 'Assign all items before splitting.');
-                    return;
-                  }
-                  if (distinctUsed < 2) {
-                    setDialogState(() => errorText = 'Split needs at least 2 people.');
+                  if (people.length < 2) {
+                    setDialogState(() => errorText = 'Add at least 2 people.');
                     return;
                   }
                   for (final line in _cart) {
-                    line.splitGroup = assignments[line.signature];
+                    if (allocatedFor(line) != line.qty) {
+                      setDialogState(() => errorText = 'Assign the full quantity of every item.');
+                      return;
+                    }
                   }
                   final groups = <String, List<CartLine>>{};
                   for (final line in _cart) {
-                    groups.putIfAbsent(line.splitGroup!, () => []).add(line);
+                    for (final p in people) {
+                      final count = allocations[line.signature]![p] ?? 0;
+                      if (count <= 0) continue;
+                      groups.putIfAbsent(p, () => []).add(
+                            CartLine(
+                              signature: line.signature,
+                              product: line.product,
+                              variation: line.variation,
+                              addons: line.addons,
+                              memberDiscount: line.memberDiscount,
+                              unitPrice: line.unitPrice,
+                              qty: count,
+                              optInPromoId: line.optInPromoId,
+                              splitGroup: p,
+                            ),
+                          );
+                    }
                   }
                   Navigator.pop(ctx);
-                  _startSplitPayment(groups.values.toList());
+                  _startSplitPayment(groups.values.toList(), names: groups.keys.toList());
                 },
                 child: const Text('Start Split Payment'),
               ),
@@ -1713,6 +1795,7 @@ class _CashierScreenState extends State<CashierScreen> {
       ),
     );
   }
+
   @override
   void dispose() {
     _pageController.dispose();
