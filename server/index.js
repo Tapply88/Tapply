@@ -300,7 +300,7 @@ app.get('/sync/pull', async (req, res) => {
     if (businessError || !businessFull) return res.status(401).json({ error: 'API key gak valid' });
     const business = businessFull;
 
-    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }, { data: staff }, { data: ingredients }, { data: recipeItems }] = await Promise.all([
+    const [{ data: products }, { data: members }, { data: promos }, { data: variations }, { data: addons }, { data: staff }, { data: ingredients }, { data: recipeItems }, { data: tables }] = await Promise.all([
       supabaseAdmin.from('products').select('*').eq('business_id', business.id),
       supabaseAdmin.from('members').select('*').eq('business_id', business.id),
       supabaseAdmin.from('promos').select('*').eq('business_id', business.id),
@@ -309,9 +309,15 @@ app.get('/sync/pull', async (req, res) => {
       supabaseAdmin.from('staff').select('*').eq('business_id', business.id).eq('active', true),
       supabaseAdmin.from('ingredients').select('*').eq('business_id', business.id),
       supabaseAdmin.from('recipe_items').select('*').eq('business_id', business.id),
+        supabaseAdmin.from('dining_tables').select('*').eq('business_id', business.id),
     ]);
 
     res.json({
+      tables: (tables || []).map((t) => ({
+        id: t.id,
+        name: t.name,
+        sortOrder: t.sort_order,
+      })),
       products: (products || []).map((p) => ({
         id: p.id,
         name: p.name,
