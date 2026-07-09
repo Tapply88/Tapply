@@ -1582,6 +1582,53 @@ class _CashierScreenState extends State<CashierScreen> {
     return true;
   }
 
+  Future<bool> _showSplitReviewDialog(String name) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text('Order for $name', style: const TextStyle(color: _navy)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ..._cart.map((l) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text('${l.product.name} x${l.qty}', style: const TextStyle(fontSize: 13))),
+                          Text(_currency.format(l.subtotal), style: const TextStyle(fontSize: 13)),
+                        ],
+                      ),
+                    )),
+                const Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                    Text(_currency.format(_grandTotal), style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel Split')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _navy),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Proceed to Payment'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _startSplitPayment(List<List<CartLine>> groups, {List<String>? names}) async {
     final entries = <({String name, List<CartLine> items})>[];
     for (var i = 0; i < groups.length; i++) {
@@ -1595,10 +1642,20 @@ class _CashierScreenState extends State<CashierScreen> {
           ..clear()
           ..addAll(current.items);
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment for: ${current.name}'), duration: const Duration(seconds: 3)),
-        );
+      final proceed = await _showSplitReviewDialog(current.name);
+      if (!proceed) {
+        setState(() {
+          _cart
+            ..clear()
+            ..addAll(current.items)
+            ..addAll(queue.expand((e) => e.items));
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Split payment cancelled. Remaining items are back in the cart.')),
+          );
+        }
+        return;
       }
       final paid = await _openPaymentSheet();
       if (!paid) {
