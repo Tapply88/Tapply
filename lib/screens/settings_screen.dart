@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/db_service.dart';
-import 'promo_screen.dart';
 
 const _navy = Color(0xFF623609);
 
@@ -108,13 +107,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'are now managed only from the web dashboard, so they stay consistent across every device. '
             'Changes there sync here automatically.',
             style: TextStyle(fontSize: 12, color: const Color(0xFF623609)),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen())),
-            icon: const Icon(Icons.local_offer_outlined, size: 18),
-            label: const Text('Manage Promo'),
           ),
           const Divider(height: 40),
           const Text('Sync', style: TextStyle(fontWeight: FontWeight.bold, color: _navy, fontSize: 16)),

@@ -24,6 +24,7 @@ class CartLine {
   final int unitPrice;
   int qty;
   final String? optInPromoId; // promo scope 'item' yang di-opt-in khusus baris ini
+  String? splitGroup; // buat split bill: 'A', 'B', dst. null = belum di-assign.
 
   CartLine({
     required this.signature,
@@ -34,6 +35,7 @@ class CartLine {
     required this.unitPrice,
     required this.qty,
     this.optInPromoId,
+    this.splitGroup,
   });
 
   int get subtotal => unitPrice * qty;
@@ -1582,6 +1584,135 @@ class _CashierScreenState extends State<CashierScreen> {
     );
   }
 
+
+  Future<void> _startSplitPayment(List<List<CartLine>> groups) async {
+    final queue = List<List<CartLine>>.from(groups);
+    while (queue.isNotEmpty) {
+      final currentGroupItems = queue.removeAt(0);
+      setState(() {
+        _cart
+          ..clear()
+          ..addAll(currentGroupItems);
+      });
+      await _openPaymentSheet();
+      if (_cart.isNotEmpty) {
+        setState(() {
+          _cart.addAll(queue.expand((g) => g));
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Split payment cancelled. Remaining items are back in the cart.')),
+          );
+        }
+        return;
+      }
+    }
+  }
+
+  Future<void> _openSplitBillDialog() async {
+    if (_cart.isEmpty) return;
+    final Map<String, String?> assignments = {for (final l in _cart) l.signature: l.splitGroup};
+    List<String> people = [];
+    for (final v in assignments.values) {
+      if (v != null && !people.contains(v)) people.add(v);
+    }
+    if (people.isEmpty) people = ['A', 'B'];
+    String? errorText;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          void addPerson() {
+            final nextLetter = String.fromCharCode('A'.codeUnitAt(0) + people.length);
+            setDialogState(() => people.add(nextLetter));
+          }
+
+          return AlertDialog(
+            title: const Text('Split Bill', style: TextStyle(color: _navy)),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Tap a letter to assign each item to a person.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    ..._cart.map((line) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text('${line.product.name} x${line.qty}', style: const TextStyle(fontSize: 13)),
+                            ),
+                            Wrap(
+                              spacing: 6,
+                              children: people.map((p) {
+                                final selected = assignments[line.signature] == p;
+                                return ChoiceChip(
+                                  label: Text(p, style: TextStyle(color: selected ? Colors.white : _navy)),
+                                  selected: selected,
+                                  selectedColor: _navy,
+                                  backgroundColor: Colors.transparent,
+                                  side: const BorderSide(color: _navy),
+                                  onSelected: (_) {
+                                    setDialogState(() => assignments[line.signature] = p);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    TextButton.icon(
+                      onPressed: addPerson,
+                      icon: const Icon(Icons.person_add_alt, size: 16, color: _navy),
+                      label: const Text('Add Person', style: TextStyle(color: _navy)),
+                    ),
+                    if (errorText != null) ...[
+                      const SizedBox(height: 8),
+                      Text(errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: _navy),
+                onPressed: () {
+                  final unassigned = assignments.values.where((v) => v == null).length;
+                  final distinctUsed = assignments.values.whereType<String>().toSet().length;
+                  if (unassigned > 0) {
+                    setDialogState(() => errorText = 'Assign all items before splitting.');
+                    return;
+                  }
+                  if (distinctUsed < 2) {
+                    setDialogState(() => errorText = 'Split needs at least 2 people.');
+                    return;
+                  }
+                  for (final line in _cart) {
+                    line.splitGroup = assignments[line.signature];
+                  }
+                  final groups = <String, List<CartLine>>{};
+                  for (final line in _cart) {
+                    groups.putIfAbsent(line.splitGroup!, () => []).add(line);
+                  }
+                  Navigator.pop(ctx);
+                  _startSplitPayment(groups.values.toList());
+                },
+                child: const Text('Start Split Payment'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
   @override
   void dispose() {
     _pageController.dispose();
@@ -1877,6 +2008,18 @@ class _CashierScreenState extends State<CashierScreen> {
               color: Colors.white,
               child: Column(
                 children: [
+                  if (_cart.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _openSplitBillDialog,
+                          icon: const Icon(Icons.call_split, size: 16, color: _navy),
+                          label: const Text('Split Bill', style: TextStyle(color: _navy, fontSize: 12)),
+                        ),
+                      ),
+                    ),
                   InkWell(
                     onTap: _pickMember,
                     child: Container(
