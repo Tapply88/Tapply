@@ -61,7 +61,6 @@ class DbService {
     await Hive.openBox<RecipeItem>(recipeItemBox);
     await Hive.openBox(syncQueueBox);
 
-    await _seedProductsIfEmpty();
     // Varian & tambahan sekarang dikelola dari dashboard doang (gak di-seed
     // lokal lagi), biar gak ada data "bawaan" yang nyangkut kalau dashboard
     // udah punya versi sendiri.
@@ -83,21 +82,6 @@ class DbService {
     }
   }
 
-  static Future<void> _seedProductsIfEmpty() async {
-    final box = Hive.box<Product>(productBox);
-    if (box.isNotEmpty) return;
-    final seed = [
-      Product(id: _uuid.v4(), name: 'Kunyit Asam', price: 12000, category: 'Jamu', stock: 30, sortOrder: 0),
-      Product(id: _uuid.v4(), name: 'Beras Kencur', price: 12000, category: 'Jamu', stock: 30, sortOrder: 1),
-      Product(id: _uuid.v4(), name: 'Temulawak', price: 13000, category: 'Jamu', stock: 30, sortOrder: 2),
-      Product(id: _uuid.v4(), name: 'Sinom', price: 12000, category: 'Jamu', stock: 30, sortOrder: 3),
-      Product(id: _uuid.v4(), name: 'Wedang Uwuh', price: 15000, category: 'Jamu', stock: 30, sortOrder: 4),
-      Product(id: _uuid.v4(), name: 'Jahe Merah', price: 13000, category: 'Jamu', stock: 30, sortOrder: 5),
-    ];
-    for (final p in seed) {
-      await box.put(p.id, p);
-    }
-  }
 
   // ---- Products ----
   static Box<Product> get products => Hive.box<Product>(productBox);
@@ -933,6 +917,11 @@ class DbService {
         productCount++;
       }
 
+      final serverProductIds = (data['products'] as List? ?? []).map((raw) => raw['id'] as String).toSet();
+      final localProductIdsToRemove = products.keys.where((key) => !serverProductIds.contains(key)).toList();
+      for (final key in localProductIdsToRemove) {
+        await products.delete(key);
+      }
       int memberCount = 0;
       for (final raw in (data['members'] as List? ?? [])) {
         final id = raw['id'] as String;

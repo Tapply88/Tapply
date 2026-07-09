@@ -1206,6 +1206,18 @@ class _CashierScreenState extends State<CashierScreen> {
       changeAmount: changeAmount,
     );
 
+    if (mounted) {
+      String debugMsg = '';
+      for (final item in items) {
+        final hasRecipe = DbService.productHasRecipe(item.productId);
+        final recipeCount = DbService.recipeItemsForProduct(item.productId).length;
+        debugMsg = debugMsg + item.productName + ':recipe=' + hasRecipe.toString() + '(' + recipeCount.toString() + ') ';
+      }
+      debugMsg = debugMsg + 'ing=' + DbService.ingredientsList.length.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(debugMsg), duration: const Duration(seconds: 10)),
+      );
+    }
     if (_selectedMember != null && _pointsToRedeem > 0) {
       final member = _selectedMember!;
       member.points -= _pointsToRedeem;
