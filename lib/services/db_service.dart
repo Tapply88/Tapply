@@ -1189,10 +1189,9 @@ class DbService {
 
     if (status == 'paid') {
       for (final item in items) {
+        await adjustStock(item.productId, -item.qty);
         if (productHasRecipe(item.productId)) {
           await deductIngredientsForSale(item.productId, item.qty);
-        } else {
-          await adjustStock(item.productId, -item.qty);
         }
       }
     }

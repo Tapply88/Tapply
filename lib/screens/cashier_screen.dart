@@ -1206,17 +1206,6 @@ class _CashierScreenState extends State<CashierScreen> {
       changeAmount: changeAmount,
     );
 
-    if (mounted) {
-      String debugMsg = '';
-      for (final item in items) {
-        debugMsg = debugMsg + 'soldId=' + item.productId + ' ';
-      }
-      final allRecipeProductIds = DbService.recipeItemsBoxRef.values.map((r) => r.productId).toSet().join(',');
-      debugMsg = debugMsg + '| recipeIds=' + allRecipeProductIds;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(debugMsg), duration: const Duration(seconds: 15)),
-      );
-    }
     if (_selectedMember != null && _pointsToRedeem > 0) {
       final member = _selectedMember!;
       member.points -= _pointsToRedeem;

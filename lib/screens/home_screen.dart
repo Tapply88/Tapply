@@ -92,12 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await DbService.setSyncServerUrl(urlCtrl.text.trim());
       await DbService.setSyncApiKey(keyCtrl.text.trim());
       if (mounted) setState(() {});
-      final result = await DbService.pullFromCloud();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PULL: ' + result.success.toString() + ' - ' + result.message), duration: const Duration(seconds: 8)),
-        );
-      }
+      await DbService.pullFromCloud();
       if (mounted) setState(() {});
     }
   }
