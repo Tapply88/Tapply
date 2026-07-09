@@ -7,6 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const midtransClient = require('midtrans-client');
 const { createClient } = require('@supabase/supabase-js');
+const fetch = require('node-fetch');
 
 const app = express();
 app.use(cors());
@@ -145,6 +146,7 @@ app.post('/sync/member', async (req, res) => {
       phone: m.phone,
       points: m.points,
       birth_date: m.birthDate ? m.birthDate.substring(0, 10) : null,
+      email: m.email || null,
     });
 
     if (upsertError) {
@@ -438,6 +440,82 @@ app.post('/sync/ingredient-deduct', async (req, res) => {
       }
     }
     res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Kirim struk via WhatsApp (Fonnte) ----
+// Satu akun Fonnte dipakai bersama buat semua bisnis (shared gateway Tapply).
+app.post('/send/whatsapp', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const { phone, message } = req.body;
+    if (!phone || !message) return res.status(400).json({ error: 'phone dan message wajib diisi' });
+
+    const fonnteRes = await fetch('https://api.fonnte.com/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': process.env.FONNTE_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ target: phone, message }),
+    });
+    const fonnteData = await fonnteRes.json();
+    if (fonnteData.status === false || fonnteData.status === 'false') {
+      return res.status(500).json({ error: 'Gagal kirim WhatsApp', detail: fonnteData });
+    }
+    res.json({ success: true, detail: fonnteData });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Kirim struk via Email (Resend) ----
+app.post('/send/email', async (req, res) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'x-api-key header kosong' });
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('sync_api_key', apiKey)
+      .single();
+    if (businessError || !business) return res.status(401).json({ error: 'API key gak valid' });
+
+    const { to, subject, text } = req.body;
+    if (!to || !subject || !text) return res.status(400).json({ error: 'to, subject, text wajib diisi' });
+
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'Tapply <onboarding@resend.dev>',
+        to: [to],
+        subject,
+        text,
+      }),
+    });
+    const resendData = await resendRes.json();
+    if (!resendRes.ok) {
+      return res.status(500).json({ error: 'Gagal kirim email', detail: resendData });
+    }
+    res.json({ success: true, detail: resendData });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
