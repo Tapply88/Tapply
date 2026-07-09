@@ -1209,13 +1209,12 @@ class _CashierScreenState extends State<CashierScreen> {
     if (mounted) {
       String debugMsg = '';
       for (final item in items) {
-        final hasRecipe = DbService.productHasRecipe(item.productId);
-        final recipeCount = DbService.recipeItemsForProduct(item.productId).length;
-        debugMsg = debugMsg + item.productName + ':recipe=' + hasRecipe.toString() + '(' + recipeCount.toString() + ') ';
+        debugMsg = debugMsg + 'soldId=' + item.productId + ' ';
       }
-      debugMsg = debugMsg + 'ing=' + DbService.ingredientsList.length.toString();
+      final allRecipeProductIds = DbService.recipeItemsBoxRef.values.map((r) => r.productId).toSet().join(',');
+      debugMsg = debugMsg + '| recipeIds=' + allRecipeProductIds;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(debugMsg), duration: const Duration(seconds: 10)),
+        SnackBar(content: Text(debugMsg), duration: const Duration(seconds: 15)),
       );
     }
     if (_selectedMember != null && _pointsToRedeem > 0) {
