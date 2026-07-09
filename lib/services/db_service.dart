@@ -996,43 +996,53 @@ class DbService {
 
       int ingredientCount = 0;
       for (final raw in (data['ingredients'] as List? ?? [])) {
-        final id = raw['id'] as String;
-        final existing = ingredientsBoxRef.get(id);
-        if (existing != null) {
-          existing.name = raw['name'];
-          existing.unit = raw['unit'] ?? existing.unit;
-          existing.stock = (raw['stock'] as num?)?.toDouble() ?? existing.stock;
-          existing.lowStockThreshold = (raw['lowStockThreshold'] as num?)?.toDouble() ?? existing.lowStockThreshold;
-          existing.save();
-        } else {
-          ingredientsBoxRef.put(
-            id,
-            Ingredient(
-              id: id,
-              name: raw['name'],
-              unit: raw['unit'] ?? 'gram',
-              stock: (raw['stock'] as num?)?.toDouble() ?? 0,
-              lowStockThreshold: (raw['lowStockThreshold'] as num?)?.toDouble() ?? 0,
-            ),
-          );
+        try {
+          final id = raw['id'] as String;
+          final existing = ingredientsBoxRef.get(id);
+          if (existing != null) {
+            existing.name = raw['name'];
+            existing.unit = raw['unit'] ?? existing.unit;
+            existing.stock = (raw['stock'] as num?)?.toDouble() ?? existing.stock;
+            existing.lowStockThreshold = (raw['lowStockThreshold'] as num?)?.toDouble() ?? existing.lowStockThreshold;
+            existing.save();
+          } else {
+            ingredientsBoxRef.put(
+              id,
+              Ingredient(
+                id: id,
+                name: raw['name'],
+                unit: raw['unit'] ?? 'gram',
+                stock: (raw['stock'] as num?)?.toDouble() ?? 0,
+                lowStockThreshold: (raw['lowStockThreshold'] as num?)?.toDouble() ?? 0,
+              ),
+            );
+          }
+          ingredientCount++;
+        } catch (_) {
+          // Lewati satu item bahan yang datanya rusak, jangan gagalkan semua sync.
         }
-        ingredientCount++;
       }
       int recipeCount = 0;
-      recipeItemsBoxRef.clear();
+      final newRecipeItems = <String, RecipeItem>{};
       for (final raw in (data['recipeItems'] as List? ?? [])) {
-        final id = raw['id'] as String;
-        recipeItemsBoxRef.put(
-          id,
-          RecipeItem(
+        try {
+          final id = raw['id'] as String;
+          newRecipeItems[id] = RecipeItem(
             id: id,
             productId: raw['productId'],
             ingredientId: raw['ingredientId'],
             quantity: (raw['quantity'] as num?)?.toDouble() ?? 0,
-          ),
-        );
-        recipeCount++;
+          );
+          recipeCount++;
+        } catch (_) {
+          // Lewati satu item resep yang datanya rusak, jangan gagalkan semua sync.
+        }
       }
+      // Baru clear+ganti box resep SETELAH semua item baru berhasil di-parse,
+      // biar kalau ada error di tengah proses, data resep lama yang masih
+      // valid gak keburu kehapus (daripada resep jadi kosong total).
+      await recipeItemsBoxRef.clear();
+      await recipeItemsBoxRef.putAll(newRecipeItems);
       final business = data['business'] as Map<String, dynamic>?;
       if (business != null) {
         await updateBusinessProfile(
