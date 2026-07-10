@@ -528,5 +528,45 @@ app.post('/send/email', async (req, res) => {
   }
 });
 
+// ---- Login email+password buat app kasir (akun sama kayak dashboard) ----
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
+
+    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+    if (authError || !authData.user) {
+      return res.status(401).json({ error: 'Email atau password salah' });
+    }
+
+    const { data: link, error: linkError } = await supabaseAdmin
+      .from('business_users')
+      .select('business_id')
+      .eq('user_id', authData.user.id)
+      .single();
+    if (linkError || !link) {
+      return res.status(404).json({ error: 'Akun ini belum terhubung ke bisnis manapun' });
+    }
+
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id, name, sync_api_key')
+      .eq('id', link.business_id)
+      .single();
+    if (businessError || !business) {
+      return res.status(404).json({ error: 'Data bisnis tidak ditemukan' });
+    }
+
+    res.json({
+      businessId: business.id,
+      businessName: business.name,
+      syncApiKey: business.sync_api_key,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Tapply backend jalan di port ${PORT}`));
