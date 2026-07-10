@@ -22,6 +22,9 @@ class Member extends HiveObject {
   @HiveField(5)
   DateTime? birthDate;
 
+  @HiveField(6)
+  String? email;
+
   Member({
     required this.id,
     required this.name,
@@ -29,5 +32,6 @@ class Member extends HiveObject {
     this.points = 0,
     required this.joinedAt,
     this.birthDate,
+    this.email,
   });
 }

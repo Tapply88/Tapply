@@ -66,6 +66,9 @@ class HeldBill extends HiveObject {
   @HiveField(7)
   String? chosenPromoId;
 
+  @HiveField(8)
+  String? tableId;
+
   HeldBill({
     required this.id,
     required this.createdAt,
@@ -75,5 +78,6 @@ class HeldBill extends HiveObject {
     this.guestName,
     this.note,
     this.chosenPromoId,
+    this.tableId,
   });
 }

@@ -14,6 +14,7 @@ import '../models/held_bill.dart';
 import '../models/staff_member.dart';
 import '../models/ingredient.dart';
 import '../models/recipe_item.dart';
+import '../models/dining_table.dart';
 
 class DbService {
   static const productBox = 'products';
@@ -29,6 +30,7 @@ class DbService {
   static const staffBox = 'staff';
   static const ingredientBox = 'ingredients';
   static const recipeItemBox = 'recipeItems';
+  static const diningTableBox = 'diningTables';
   static final _uuid = const Uuid();
 
   static Future<void> init() async {
@@ -46,6 +48,7 @@ class DbService {
     Hive.registerAdapter(StaffMemberAdapter());
     Hive.registerAdapter(IngredientAdapter());
     Hive.registerAdapter(RecipeItemAdapter());
+    Hive.registerAdapter(DiningTableAdapter());
 
     await Hive.openBox<Product>(productBox);
     await Hive.openBox<Member>(memberBox);
@@ -59,6 +62,7 @@ class DbService {
     await Hive.openBox<StaffMember>(staffBox);
     await Hive.openBox<Ingredient>(ingredientBox);
     await Hive.openBox<RecipeItem>(recipeItemBox);
+    await Hive.openBox<DiningTable>(diningTableBox);
     await Hive.openBox(syncQueueBox);
 
     // Varian & tambahan sekarang dikelola dari dashboard doang (gak di-seed
@@ -357,6 +361,7 @@ class DbService {
       'phone': m.phone,
       'points': m.points,
       'birthDate': m.birthDate?.toIso8601String(),
+      'email': m.email,
     };
     try {
       final response = await http
@@ -459,6 +464,38 @@ class DbService {
 
   // ---- Sinkronisasi ke dashboard web (satu arah: app -> cloud) ----
   static bool get syncEnabled => syncServerUrl.isNotEmpty && syncApiKey.isNotEmpty;
+
+  static Future<bool> sendReceiptWhatsApp(String phone, String message) async {
+    if (!syncEnabled) return false;
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$syncServerUrl/send/whatsapp'),
+            headers: {'Content-Type': 'application/json', 'x-api-key': syncApiKey},
+            body: jsonEncode({'phone': phone, 'message': message}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> sendReceiptEmail(String to, String subject, String text) async {
+    if (!syncEnabled) return false;
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$syncServerUrl/send/email'),
+            headers: {'Content-Type': 'application/json', 'x-api-key': syncApiKey},
+            body: jsonEncode({'to': to, 'subject': subject, 'text': text}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
   static bool get isPaired => syncEnabled;
   static String get syncServerUrl => settings.get('syncServerUrl', defaultValue: '');
   static Future<void> setSyncServerUrl(String url) async => settings.put('syncServerUrl', url);
@@ -780,6 +817,11 @@ class DbService {
   static List<HeldBill> get heldBillsSorted =>
       heldBills.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
+  static Box<DiningTable> get diningTables => Hive.box<DiningTable>(diningTableBox);
+
+  static List<DiningTable> get diningTablesSorted =>
+      diningTables.values.toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
   // ---- Shift (modal awal, end shift, settlement) ----
   static Box<Shift> get shifts => Hive.box<Shift>(shiftBox);
 
@@ -947,6 +989,32 @@ class DbService {
         }
         memberCount++;
       }
+
+        int tableCount = 0;
+        for (final raw in (data['tables'] as List? ?? [])) {
+          final id = raw['id'] as String;
+          final existing = diningTables.get(id);
+          if (existing != null) {
+            existing.name = raw['name'];
+            existing.sortOrder = raw['sortOrder'] ?? existing.sortOrder;
+            await existing.save();
+          } else {
+            await diningTables.put(
+              id,
+              DiningTable(
+                id: id,
+                name: raw['name'],
+                sortOrder: raw['sortOrder'] ?? 0,
+              ),
+            );
+          }
+          tableCount++;
+        }
+        final serverTableIds = (data['tables'] as List? ?? []).map((raw) => raw['id'] as String).toSet();
+        final localTableIdsToRemove = diningTables.keys.where((key) => !serverTableIds.contains(key)).toList();
+        for (final key in localTableIdsToRemove) {
+          await diningTables.delete(key);
+        }
 
       int promoCount = 0;
       for (final raw in (data['promos'] as List? ?? [])) {

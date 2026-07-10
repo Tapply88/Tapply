@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -62,6 +63,8 @@ class _CashierScreenState extends State<CashierScreen> {
   int _pointsToRedeem = 0;
   String? _guestName;
   String _salesType = 'Dine In';
+  String? _selectedTableId;
+  String? _selectedTableName;
 
   int _basePriceFor(Product p) {
     if (_salesType.startsWith('Online') && p.onlinePrice != null) return p.onlinePrice!;
@@ -857,27 +860,33 @@ class _CashierScreenState extends State<CashierScreen> {
 
   Future<void> _saveBillDraft() async {
     if (_cart.isEmpty) return;
-    final noteCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Save Bill', style: TextStyle(color: _navy)),
-        content: TextField(
-          controller: noteCtrl,
-          decoration: const InputDecoration(labelText: 'Table Name/Number (optional)', hintText: 'e.g. Table 5'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _navy),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Save'),
+    String? billNote = _selectedTableName;
+    final billTableId = _selectedTableId;
+
+    if (billTableId == null) {
+      final noteCtrl = TextEditingController();
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Save Bill', style: TextStyle(color: _navy)),
+          content: TextField(
+            controller: noteCtrl,
+            decoration: const InputDecoration(labelText: 'Table Name/Number (optional)', hintText: 'e.g. Table 5'),
+            autofocus: true,
           ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _navy),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      billNote = noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim();
+    }
 
     final bill = HeldBill(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -897,8 +906,9 @@ class _CashierScreenState extends State<CashierScreen> {
       salesType: _salesType,
       memberId: _selectedMember?.id,
       guestName: _guestName,
-      note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+      note: billNote,
       chosenPromoId: _chosenPromoId,
+      tableId: billTableId,
     );
     await DbService.saveHeldBill(bill);
 
@@ -909,9 +919,137 @@ class _CashierScreenState extends State<CashierScreen> {
       _pointsToRedeem = 0;
       _guestName = null;
       _chosenPromoId = null;
+      _selectedTableId = null;
+      _selectedTableName = null;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Bill${bill.note != null ? ' (${bill.note})' : ''} saved.')),
+    );
+  }
+
+  void _openTablesGrid() {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Dialog(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 560),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Pilih Meja', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _navy)),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: ValueListenableBuilder(
+                        valueListenable: DbService.diningTables.listenable(),
+                        builder: (context, tableBox, _) {
+                          final tables = DbService.diningTablesSorted;
+                          if (tables.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Text('Belum ada meja diatur. Atur dari dashboard dulu.', style: TextStyle(color: Color(0xFF623609))),
+                            );
+                          }
+                          return ValueListenableBuilder(
+                            valueListenable: DbService.heldBills.listenable(),
+                            builder: (context, billBox, __) {
+                              final bills = DbService.heldBillsSorted;
+                              return GridView.builder(
+                                shrinkWrap: true,
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  childAspectRatio: 1.1,
+                                ),
+                                itemCount: tables.length,
+                                itemBuilder: (ctx2, i) {
+                                  final table = tables[i];
+                                  HeldBill? occupiedBill;
+                                  for (final b in bills) {
+                                    if (b.tableId == table.id) {
+                                      occupiedBill = b;
+                                      break;
+                                    }
+                                  }
+                                  final occupied = occupiedBill != null;
+                                  final total = occupied ? occupiedBill!.items.fold<int>(0, (s, it) => s + it.unitPrice * it.qty) : 0;
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(10),
+                                    onTap: () async {
+                                      if (occupied) {
+                                        Navigator.pop(ctx);
+                                        await _loadHeldBill(occupiedBill!);
+                                      } else {
+                                        Navigator.pop(ctx);
+                                        setState(() {
+                                          _selectedTableId = table.id;
+                                          _selectedTableName = table.name;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Meja ${table.name} dipilih. Tambah item lalu Save Bill.')),
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: occupied ? const Color(0xFFF6D6D6) : const Color(0xFFD9EAD3),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: occupied ? Colors.red.shade300 : Colors.green.shade400),
+                                      ),
+                                      padding: const EdgeInsets.all(8),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.table_bar, color: occupied ? Colors.red.shade700 : Colors.green.shade700, size: 26),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            table.name,
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: occupied ? Colors.red.shade700 : Colors.green.shade700),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          if (occupied) ...[
+                                            const SizedBox(height: 2),
+                                            Text(_currency.format(total), style: TextStyle(fontSize: 11, color: Colors.red.shade700)),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _openHeldBillsList();
+                      },
+                      icon: const Icon(Icons.receipt_long, size: 16),
+                      label: const Text('Bill Tanpa Meja (Take Away/Lain)'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: _navy), foregroundColor: _navy),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1042,6 +1180,8 @@ class _CashierScreenState extends State<CashierScreen> {
       _pointsToRedeem = 0;
       _guestName = bill.guestName;
       _chosenPromoId = bill.chosenPromoId;
+        _selectedTableId = bill.tableId;
+        _selectedTableName = bill.tableId != null ? DbService.diningTables.get(bill.tableId)?.name : null;
     });
 
     await DbService.deleteHeldBill(bill.id);
@@ -1215,13 +1355,15 @@ class _CashierScreenState extends State<CashierScreen> {
     }
 
     if (!mounted) return;
-    setState(() {
-      _cart.clear();
-      _selectedMember = null;
-      _pointsToRedeem = 0;
-      _guestName = null;
-      _chosenPromoId = null;
-    });
+      setState(() {
+        _cart.clear();
+        _selectedMember = null;
+        _pointsToRedeem = 0;
+        _guestName = null;
+        _chosenPromoId = null;
+        _selectedTableId = null;
+        _selectedTableName = null;
+      });
 
     await _showPostPaymentPage(tx, prefillPhone);
   }
@@ -1270,12 +1412,19 @@ class _CashierScreenState extends State<CashierScreen> {
                       const SizedBox(width: 8),
                       FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: _navy),
-                        onPressed: () {
-                          if (emailCtrl.text.trim().isEmpty) return;
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Receipt will be sent to ${emailCtrl.text.trim()} (needs an email service connected on the backend)')),
-                          );
-                        },
+                            onPressed: () async {
+                              final email = emailCtrl.text.trim();
+                              if (email.isEmpty) return;
+                              final ok = await DbService.sendReceiptEmail(
+                                email,
+                                'Receipt - ${DbService.businessName}',
+                                buildReceiptText(tx),
+                              );
+                              if (!ctx.mounted) return;
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(ok ? 'Struk terkirim ke $email' : 'Gagal kirim email, coba lagi.')),
+                              );
+                            },
                         child: const Text('Send'),
                       ),
                     ],
@@ -1295,12 +1444,16 @@ class _CashierScreenState extends State<CashierScreen> {
                       const SizedBox(width: 8),
                       FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: _navy),
-                        onPressed: () {
-                          if (phoneCtrl.text.trim().isEmpty) return;
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Receipt will be sent to ${phoneCtrl.text.trim()} (needs an SMS/WhatsApp service connected on the backend)')),
-                          );
-                        },
+                            onPressed: () async {
+                              final phone = phoneCtrl.text.trim();
+                              if (phone.isEmpty) return;
+                              final waPhone = normalizePhoneForWa(phone);
+                              final ok = await DbService.sendReceiptWhatsApp(waPhone, buildReceiptText(tx));
+                              if (!ctx.mounted) return;
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(ok ? 'Struk terkirim ke WhatsApp' : 'Gagal kirim WhatsApp, coba lagi.')),
+                              );
+                            },
                         child: const Text('Send'),
                       ),
                     ],
@@ -1687,6 +1840,7 @@ class _CashierScreenState extends State<CashierScreen> {
       for (final l in _cart) l.signature: <String, int>{},
     };
     final nameCtrl = TextEditingController();
+      final phoneCtrl = TextEditingController();
     String? errorText;
 
     await showDialog<void>(
@@ -1699,6 +1853,7 @@ class _CashierScreenState extends State<CashierScreen> {
             setDialogState(() {
               people.add(name);
               nameCtrl.clear();
+                phoneCtrl.clear();
             });
           }
 
@@ -1715,23 +1870,48 @@ class _CashierScreenState extends State<CashierScreen> {
                   children: [
                     const Text('Add each person, then allocate item quantities to them.', style: TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: nameCtrl,
-                            decoration: const InputDecoration(labelText: 'Person name', isDense: true),
-                            onSubmitted: (_) => addPerson(),
+                      TextField(
+                        controller: phoneCtrl,
+                        decoration: const InputDecoration(labelText: 'No. HP (opsional, auto-isi nama kalau member)', isDense: true),
+                        keyboardType: TextInputType.phone,
+                        onChanged: (val) {
+                          final m = DbService.findMemberByPhone(val.trim());
+                          setDialogState(() {
+                            if (m != null && nameCtrl.text.trim().isEmpty) {
+                              nameCtrl.text = m.name;
+                            }
+                          });
+                        },
+                      ),
+                      Builder(builder: (_) {
+                        if (phoneCtrl.text.trim().isEmpty) return const SizedBox.shrink();
+                        final m = DbService.findMemberByPhone(phoneCtrl.text.trim());
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 4),
+                          child: Text(
+                            m != null ? 'Member: ${m.name} (${m.points} pts)' : 'Bukan member terdaftar, isi nama manual',
+                            style: TextStyle(fontSize: 11, color: m != null ? Colors.green.shade700 : Colors.orange.shade700),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton(
-                          style: FilledButton.styleFrom(backgroundColor: _navy),
-                          onPressed: addPerson,
-                          child: const Text('Add'),
-                        ),
-                      ],
-                    ),
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: nameCtrl,
+                              decoration: const InputDecoration(labelText: 'Person name', isDense: true),
+                              onSubmitted: (_) => addPerson(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: _navy),
+                            onPressed: addPerson,
+                            child: const Text('Add'),
+                          ),
+                        ],
+                      ),
                     if (people.isNotEmpty) ...[
                       const SizedBox(height: 10),
                       Wrap(
@@ -1968,7 +2148,7 @@ class _CashierScreenState extends State<CashierScreen> {
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        onPressed: _openHeldBillsList,
+                        onPressed: _openTablesGrid,
                         icon: const Icon(Icons.receipt_long_outlined, color: _navy),
                         tooltip: 'Saved Bills',
                       ),
@@ -2148,6 +2328,10 @@ class _CashierScreenState extends State<CashierScreen> {
               color: Colors.white,
               child: Column(
                 children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
                   if (_cart.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -2214,11 +2398,12 @@ class _CashierScreenState extends State<CashierScreen> {
                     ),
                   ),
                   const Divider(height: 1),
-                  Expanded(
-                    child: _cart.isEmpty
+                    _cart.isEmpty
                         ? const Center(child: Text('No items yet', style: TextStyle(color: const Color(0xFF623609))))
                         : ListView.builder(
                             itemCount: _cart.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
                             itemBuilder: (ctx, i) {
                               final l = _cart[i];
                               final promoNote = _lineDiscountNote(l);
@@ -2253,7 +2438,6 @@ class _CashierScreenState extends State<CashierScreen> {
                               );
                             },
                           ),
-                  ),
                   if (DbService.validPromosFor(cartSubtotal: _subtotal, productSubtotals: _productSubtotals, selectedMember: _selectedMember).isNotEmpty) _buildPromoBanner(),
                   const Divider(height: 1),
                   Padding(
@@ -2274,6 +2458,10 @@ class _CashierScreenState extends State<CashierScreen> {
                       ],
                     ),
                   ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Row(
                     children: [
                       Expanded(

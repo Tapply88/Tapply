@@ -80,13 +80,14 @@ class HeldBillAdapter extends TypeAdapter<HeldBill> {
       guestName: fields[5] as String?,
       note: fields[6] as String?,
       chosenPromoId: fields[7] as String?,
+      tableId: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HeldBill obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -102,7 +103,9 @@ class HeldBillAdapter extends TypeAdapter<HeldBill> {
       ..writeByte(6)
       ..write(obj.note)
       ..writeByte(7)
-      ..write(obj.chosenPromoId);
+      ..write(obj.chosenPromoId)
+      ..writeByte(8)
+      ..write(obj.tableId);
   }
 
   @override

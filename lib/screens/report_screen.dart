@@ -1,3 +1,4 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -54,6 +55,9 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   void _showReceipt(BuildContext context, dynamic tx) {
+    final member = (tx.memberId != null) ? DbService.members.get(tx.memberId) : null;
+    final rcptPhoneCtrl = TextEditingController(text: member?.phone ?? '');
+    final rcptEmailCtrl = TextEditingController(text: member?.email ?? '');
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -68,6 +72,61 @@ class _ReportScreenState extends State<ReportScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       ReceiptView(tx: tx),
+                      const SizedBox(height: 16),
+                      const Text('Kirim Ulang Struk', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _navy)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: rcptPhoneCtrl,
+                              keyboardType: TextInputType.phone,
+                              decoration: const InputDecoration(hintText: '08xxxxxxxxxx (WA)', isDense: true),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: _navy),
+                              onPressed: () async {
+                                final phone = rcptPhoneCtrl.text.trim();
+                                if (phone.isEmpty) return;
+                                final waPhone = normalizePhoneForWa(phone);
+                                final ok = await DbService.sendReceiptWhatsApp(waPhone, buildReceiptText(tx));
+                                if (!ctx.mounted) return;
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ok ? 'Struk terkirim ke WhatsApp' : 'Gagal kirim WhatsApp, coba lagi.')));
+                              },
+                            child: const Icon(Icons.send, size: 16),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: rcptEmailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(hintText: 'email@example.com', isDense: true),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: _navy),
+                              onPressed: () async {
+                                final email = rcptEmailCtrl.text.trim();
+                                if (email.isEmpty) return;
+                                final ok = await DbService.sendReceiptEmail(
+                                  email,
+                                  'Receipt - ${DbService.businessName}',
+                                  buildReceiptText(tx),
+                                );
+                                if (!ctx.mounted) return;
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ok ? 'Struk terkirim ke $email' : 'Gagal kirim email, coba lagi.')));
+                              },
+                            child: const Icon(Icons.send, size: 16),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
                       if (tx.status == 'paid') ...[
                         OutlinedButton.icon(

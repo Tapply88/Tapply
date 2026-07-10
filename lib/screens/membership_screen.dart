@@ -30,6 +30,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
   Future<void> _addMember() async {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController(text: _searchCtrl.text.trim());
+    final emailCtrl = TextEditingController();
     DateTime? birthDate;
     final dateFmt = DateFormat('dd MMM yyyy');
     final ok = await showDialog<bool>(
@@ -42,6 +43,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
             children: [
               TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
               TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone Number'), keyboardType: TextInputType.phone),
+                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email (optional)'), keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -86,6 +88,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
         phone: phoneCtrl.text.trim(),
         joinedAt: DateTime.now(),
         birthDate: birthDate,
+          email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
       );
       await DbService.saveMember(member);
       setState(() {
@@ -159,7 +162,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 child: ListTile(
                   leading: CircleAvatar(child: Text(_found!.name.isNotEmpty ? _found!.name[0].toUpperCase() : '?')),
                   title: Text(_found!.name),
-                  subtitle: Text(_found!.phone),
+                  subtitle: Text(_found!.email != null && _found!.email!.isNotEmpty ? '${_found!.phone} \u2022 ${_found!.email}' : _found!.phone),
                   trailing: Text('${_found!.points} points', style: const TextStyle(fontWeight: FontWeight.bold, color: _navy)),
                 ),
               )

@@ -34,6 +34,43 @@ String paymentMethodLabel(String code) {
   }
 }
 
+/// Normalize nomor HP Indonesia jadi format internasional buat wa.me
+/// (buang spasi/strip, ubah awalan 0 jadi 62, buang tanda + kalau ada).
+String normalizePhoneForWa(String phone) {
+  var p = phone.trim().replaceAll(RegExp(r'[^0-9+]'), '');
+  if (p.startsWith('+')) p = p.substring(1);
+  if (p.startsWith('0')) p = '62${p.substring(1)}';
+  if (!p.startsWith('62') && p.isNotEmpty) p = '62$p';
+  return p;
+}
+
+/// Bikin versi teks dari struk, buat dikirim lewat WhatsApp/Email.
+String buildReceiptText(TransactionRecord tx) {
+  final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+  final buffer = StringBuffer();
+  buffer.writeln(DbService.businessName);
+  if (DbService.businessAddress.isNotEmpty) buffer.writeln(DbService.businessAddress);
+  buffer.writeln('---------------------------');
+  if (tx.receiptNumber != null) buffer.writeln('Receipt No.: ${tx.receiptNumber}');
+  buffer.writeln(DateFormat('dd MMM yyyy, HH:mm').format(tx.createdAt));
+  buffer.writeln(tx.salesType);
+  buffer.writeln('---------------------------');
+  for (final item in tx.items) {
+    buffer.writeln('${item.productName} x${item.qty}  ${currency.format(item.subtotal)}');
+    if (item.note != null && item.note!.isNotEmpty) buffer.writeln('  ${item.note}');
+  }
+  buffer.writeln('---------------------------');
+  buffer.writeln('Sub-Total: ${currency.format(tx.itemsSubtotal)}');
+  if (tx.taxAmount != 0) buffer.writeln('Tax: ${currency.format(tx.taxAmount)}');
+  if (tx.serviceAmount != 0) buffer.writeln('Service: ${currency.format(tx.serviceAmount)}');
+  if (tx.discountAmount > 0) buffer.writeln('Discount: -${currency.format(tx.discountAmount)}');
+  buffer.writeln('TOTAL: ${currency.format(tx.total)}');
+  buffer.writeln('Payment: ${paymentMethodLabel(tx.paymentMethod)}');
+  buffer.writeln('---------------------------');
+  buffer.writeln(DbService.receiptFooterText);
+  return buffer.toString();
+}
+
 /// Receipt widget reused on: post-payment screen & transaction history.
 class ReceiptView extends StatelessWidget {
   final TransactionRecord tx;

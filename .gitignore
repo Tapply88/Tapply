@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Scratch scripts & build artifacts (dari sesi Claude, sekali pakai)
+*.apk
+tapply_diag_*.sh
+fix_*.py
+apply_*.sh
+push_*.sh
+tapply_find_*.sh
+tapply_check_*.sh
+tapply_verify_*.sh
+insert_test_tables.sql
+*.sql
+!supabase/**/*.sql

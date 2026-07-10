@@ -1,50 +1,38 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'member.dart';
+part of 'dining_table.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class MemberAdapter extends TypeAdapter<Member> {
+class DiningTableAdapter extends TypeAdapter<DiningTable> {
   @override
-  final int typeId = 1;
+  final int typeId = 13;
 
   @override
-  Member read(BinaryReader reader) {
+  DiningTable read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Member(
+    return DiningTable(
       id: fields[0] as String,
       name: fields[1] as String,
-      phone: fields[2] as String,
-      points: fields[3] as int,
-      joinedAt: fields[4] as DateTime,
-      birthDate: fields[5] as DateTime?,
-      email: fields[6] as String?,
+      sortOrder: fields[2] as int,
     );
   }
 
   @override
-  void write(BinaryWriter writer, Member obj) {
+  void write(BinaryWriter writer, DiningTable obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.name)
       ..writeByte(2)
-      ..write(obj.phone)
-      ..writeByte(3)
-      ..write(obj.points)
-      ..writeByte(4)
-      ..write(obj.joinedAt)
-      ..writeByte(5)
-      ..write(obj.birthDate)
-      ..writeByte(6)
-      ..write(obj.email);
+      ..write(obj.sortOrder);
   }
 
   @override
@@ -53,7 +41,7 @@ class MemberAdapter extends TypeAdapter<Member> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MemberAdapter &&
+      other is DiningTableAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
