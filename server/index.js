@@ -536,6 +536,7 @@ app.post('/auth/login', async (req, res) => {
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
     if (authError || !authData.user) {
+      console.error('LOGIN GAGAL untuk', email, '- alasan asli:', authError ? authError.message : 'no user returned');
       return res.status(401).json({ error: 'Email atau password salah' });
     }
 
