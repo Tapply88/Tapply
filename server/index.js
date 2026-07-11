@@ -579,7 +579,7 @@ app.post('/auth/login', async (req, res) => {
         });
       }
 
-      await supabaseAdmin.from('devices').upsert(
+      const { error: deviceUpsertError } = await supabaseAdmin.from('devices').upsert(
         {
           business_id: business.id,
           device_id: deviceId,
@@ -588,6 +588,11 @@ app.post('/auth/login', async (req, res) => {
         },
         { onConflict: 'business_id,device_id' }
       );
+      if (deviceUpsertError) {
+        console.error('GAGAL UPSERT DEVICE:', deviceUpsertError.message, deviceUpsertError.details, deviceUpsertError.hint);
+      } else {
+        console.error('DEVICE UPSERT SUKSES untuk', deviceId);
+      }
     }
 
     res.json({
