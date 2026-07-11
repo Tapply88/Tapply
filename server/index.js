@@ -562,6 +562,8 @@ app.post('/auth/login', async (req, res) => {
       business.plan === 'pro' ||
       business.plan === 'multi_outlet' ||
       (business.plan === 'trial' && business.plan_expires_at && new Date(business.plan_expires_at) > new Date());
+    const isMultiOutlet = business.plan === 'multi_outlet';
+    const deviceLimit = isMultiOutlet ? Infinity : isProActive ? 3 : 1;
 
     if (deviceId) {
       const { data: existingDevices } = await supabaseAdmin
@@ -571,10 +573,11 @@ app.post('/auth/login', async (req, res) => {
 
       const alreadyRegistered = (existingDevices || []).some((d) => d.device_id === deviceId);
 
-      if (!isProActive && !alreadyRegistered && (existingDevices || []).length >= 1) {
-        return res.status(403).json({
-          error: 'This plan only allows 1 device. Upgrade to Pro to connect additional devices.',
-        });
+      if (!alreadyRegistered && (existingDevices || []).length >= deviceLimit) {
+        const msg = deviceLimit === 1
+          ? 'This plan only allows 1 device. Upgrade to Pro to connect additional devices.'
+          : `This plan only allows ${deviceLimit} devices. Upgrade to Multi-Outlet for unlimited devices.`;
+        return res.status(403).json({ error: msg });
       }
 
       const { error: deviceUpsertError } = await supabaseAdmin.from('devices').upsert(
