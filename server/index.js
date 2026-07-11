@@ -532,12 +532,10 @@ app.post('/send/email', async (req, res) => {
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, password, deviceId, deviceName } = req.body;
-    console.error('LOGIN REQUEST -- deviceId:', deviceId, '| deviceName:', deviceName);
     if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
     if (authError || !authData.user) {
-      console.error('LOGIN GAGAL untuk', email, '- alasan asli:', authError ? authError.message : 'no user returned');
       return res.status(401).json({ error: 'Email atau password salah' });
     }
 
@@ -589,9 +587,7 @@ app.post('/auth/login', async (req, res) => {
         { onConflict: 'business_id,device_id' }
       );
       if (deviceUpsertError) {
-        console.error('GAGAL UPSERT DEVICE:', deviceUpsertError.message, deviceUpsertError.details, deviceUpsertError.hint);
-      } else {
-        console.error('DEVICE UPSERT SUKSES untuk', deviceId);
+        console.error('Gagal simpan device:', deviceUpsertError.message);
       }
     }
 
