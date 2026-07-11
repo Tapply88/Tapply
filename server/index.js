@@ -532,6 +532,7 @@ app.post('/send/email', async (req, res) => {
 app.post('/auth/login', async (req, res) => {
   try {
     const { email, password, deviceId, deviceName } = req.body;
+    console.error('LOGIN REQUEST -- deviceId:', deviceId, '| deviceName:', deviceName);
     if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
