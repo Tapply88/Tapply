@@ -8,6 +8,7 @@ const cors = require('cors');
 const midtransClient = require('midtrans-client');
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -599,6 +600,167 @@ app.post('/auth/login', async (req, res) => {
       businessName: business.name,
       syncApiKey: business.sync_api_key,
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- DOKU billing: helper signature ----
+function dokuDigest(bodyString) {
+  return crypto.createHash('sha256').update(bodyString, 'utf8').digest('base64');
+}
+
+function dokuSignature(clientId, requestId, requestTimestamp, requestTarget, digest, secretKey) {
+  const component = `Client-Id:${clientId}\nRequest-Id:${requestId}\nRequest-Timestamp:${requestTimestamp}\nRequest-Target:${requestTarget}\nDigest:${digest}`;
+  const hmac = crypto.createHmac('sha256', secretKey).update(component, 'utf8').digest('base64');
+  return `HMACSHA256=${hmac}`;
+}
+
+const BILLING_PRICES = {
+  starter: { monthly: 58000, yearly: 580000 },
+  pro: { monthly: 169000, yearly: 1690000 },
+};
+
+// ---- Bikin pembayaran DOKU buat upgrade/perpanjang plan bisnis ----
+app.post('/billing/create-payment', async (req, res) => {
+  try {
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Missing auth token' });
+
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !userData.user) return res.status(401).json({ error: 'Invalid auth token' });
+
+    const { data: link } = await supabaseAdmin.from('business_users').select('business_id').eq('user_id', userData.user.id).single();
+    if (!link) return res.status(404).json({ error: 'Business not found for this user' });
+
+    const { plan, period } = req.body;
+    if (!BILLING_PRICES[plan] || !BILLING_PRICES[plan][period]) {
+      return res.status(400).json({ error: 'Invalid plan or period' });
+    }
+    const amount = BILLING_PRICES[plan][period];
+
+    const { data: business } = await supabaseAdmin.from('businesses').select('id, name').eq('id', link.business_id).single();
+    if (!business) return res.status(404).json({ error: 'Business not found' });
+
+    const invoiceNumber = `TAPPLY-${business.id.slice(0, 8)}-${Date.now()}`;
+
+    await supabaseAdmin.from('billing_invoices').insert({
+      business_id: business.id,
+      invoice_number: invoiceNumber,
+      plan,
+      period,
+      amount,
+      status: 'pending',
+    });
+
+    if (!process.env.DOKU_CLIENT_ID || !process.env.DOKU_SECRET_KEY) {
+      return res.status(503).json({ error: 'DOKU belum dikonfigurasi (env var DOKU_CLIENT_ID/DOKU_SECRET_KEY belum diisi)' });
+    }
+
+    const dokuBaseUrl = process.env.DOKU_ENV === 'production' ? 'https://api.doku.com' : 'https://api-sandbox.doku.com';
+    const targetPath = '/checkout/v1/payment';
+    const dashboardUrl = process.env.DASHBOARD_URL || 'https://tapply-dashboard.vercel.app';
+    const requestBody = {
+      order: {
+        amount,
+        invoice_number: invoiceNumber,
+        callback_url: `${dashboardUrl}/dashboard/billing?status=success`,
+        callback_url_cancel: `${dashboardUrl}/dashboard/billing?status=cancel`,
+      },
+      payment: {
+        payment_due_date: 60,
+      },
+      customer: {
+        name: business.name,
+      },
+    };
+    const bodyString = JSON.stringify(requestBody);
+    const requestId = crypto.randomUUID();
+    const requestTimestamp = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    const digest = dokuDigest(bodyString);
+    const signature = dokuSignature(process.env.DOKU_CLIENT_ID, requestId, requestTimestamp, targetPath, digest, process.env.DOKU_SECRET_KEY);
+
+    const dokuRes = await fetch(`${dokuBaseUrl}${targetPath}`, {
+      method: 'POST',
+      headers: {
+        'Client-Id': process.env.DOKU_CLIENT_ID,
+        'Request-Id': requestId,
+        'Request-Timestamp': requestTimestamp,
+        'Signature': signature,
+        'Content-Type': 'application/json',
+      },
+      body: bodyString,
+    });
+    const dokuData = await dokuRes.json();
+
+    if (!dokuRes.ok || !dokuData.response || !dokuData.response.payment || !dokuData.response.payment.url) {
+      console.error('DOKU create payment failed:', JSON.stringify(dokuData));
+      return res.status(500).json({ error: 'Failed to create payment with DOKU', detail: dokuData });
+    }
+
+    res.json({ paymentUrl: dokuData.response.payment.url, invoiceNumber });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Webhook notifikasi pembayaran dari DOKU ----
+app.post('/billing/doku-notification', async (req, res) => {
+  try {
+    if (process.env.DOKU_SECRET_KEY) {
+      const clientId = req.headers['client-id'];
+      const requestId = req.headers['request-id'];
+      const requestTimestamp = req.headers['request-timestamp'];
+      const signature = req.headers['signature'];
+
+      const bodyString = JSON.stringify(req.body);
+      const digest = dokuDigest(bodyString);
+      const expectedSignature = dokuSignature(clientId, requestId, requestTimestamp, '/billing/doku-notification', digest, process.env.DOKU_SECRET_KEY);
+
+      if (signature !== expectedSignature) {
+        console.error('DOKU webhook signature mismatch');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+    }
+
+    const { order, transaction } = req.body;
+    if (!order || !transaction) return res.status(400).json({ error: 'Invalid payload' });
+
+    if (transaction.status === 'SUCCESS') {
+      const { data: invoice } = await supabaseAdmin
+        .from('billing_invoices')
+        .select('*')
+        .eq('invoice_number', order.invoice_number)
+        .single();
+
+      if (invoice && invoice.status !== 'paid') {
+        const { data: business } = await supabaseAdmin.from('businesses').select('plan, plan_expires_at').eq('id', invoice.business_id).single();
+
+        const now = new Date();
+        const currentExpiry = business && business.plan_expires_at ? new Date(business.plan_expires_at) : null;
+        const baseDate = currentExpiry && currentExpiry > now ? currentExpiry : now;
+        const monthsToAdd = invoice.period === 'yearly' ? 12 : 1;
+        const newExpiry = new Date(baseDate);
+        newExpiry.setMonth(newExpiry.getMonth() + monthsToAdd);
+
+        await supabaseAdmin.from('businesses').update({
+          plan: invoice.plan,
+          plan_expires_at: newExpiry.toISOString(),
+        }).eq('id', invoice.business_id);
+
+        await supabaseAdmin.from('billing_invoices').update({
+          status: 'paid',
+          paid_at: now.toISOString(),
+        }).eq('id', invoice.id);
+
+        console.error('Billing paid:', invoice.invoice_number, '-> plan', invoice.plan, 'until', newExpiry.toISOString());
+      }
+    }
+
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
