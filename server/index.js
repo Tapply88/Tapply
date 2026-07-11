@@ -531,7 +531,7 @@ app.post('/send/email', async (req, res) => {
 // ---- Login email+password buat app kasir (akun sama kayak dashboard) ----
 app.post('/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId, deviceName } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email dan password wajib diisi' });
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
@@ -550,11 +550,42 @@ app.post('/auth/login', async (req, res) => {
 
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('id, name, sync_api_key')
+      .select('id, name, sync_api_key, plan, plan_expires_at')
       .eq('id', link.business_id)
       .single();
     if (businessError || !business) {
       return res.status(404).json({ error: 'Data bisnis tidak ditemukan' });
+    }
+
+    // ---- Device gating: Trial/Starter plan cuma boleh 1 device aktif ----
+    const isProActive =
+      business.plan === 'pro' ||
+      business.plan === 'multi_outlet' ||
+      (business.plan === 'trial' && business.plan_expires_at && new Date(business.plan_expires_at) > new Date());
+
+    if (deviceId) {
+      const { data: existingDevices } = await supabaseAdmin
+        .from('devices')
+        .select('device_id')
+        .eq('business_id', business.id);
+
+      const alreadyRegistered = (existingDevices || []).some((d) => d.device_id === deviceId);
+
+      if (!isProActive && !alreadyRegistered && (existingDevices || []).length >= 1) {
+        return res.status(403).json({
+          error: 'This plan only allows 1 device. Upgrade to Pro to connect additional devices.',
+        });
+      }
+
+      await supabaseAdmin.from('devices').upsert(
+        {
+          business_id: business.id,
+          device_id: deviceId,
+          device_name: deviceName || null,
+          last_seen_at: new Date().toISOString(),
+        },
+        { onConflict: 'business_id,device_id' }
+      );
     }
 
     res.json({
